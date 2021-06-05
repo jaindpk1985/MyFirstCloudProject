@@ -17,7 +17,12 @@
 package com.example.appengine.demos.springboot;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.ResponseBody;
+import java.sql.*;
 
 @RestController
 public class HelloworldController {
@@ -25,4 +30,20 @@ public class HelloworldController {
   public String hello() {
     return "Hello world - Deepak Jain came to Cloud";
   }
+  
+  @CrossOrigin("http://bestatone.com")
+  @PostMapping(value = "/saveNumber")
+  @ResponseBody
+	public String saveNumber(@RequestParam String number, @RequestParam String pinCode) {
+		Statement stmt = Configuration.getStatementFromDB();
+		try {
+			String insertQuery = "insert into UserNotificationPref values(null,'" + number + "','" + pinCode+ "',null,null)";
+			stmt.execute(insertQuery);
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return "Error";
+		}
+		return "Success";
+	}
 }
