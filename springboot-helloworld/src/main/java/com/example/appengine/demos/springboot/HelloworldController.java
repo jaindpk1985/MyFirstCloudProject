@@ -82,7 +82,7 @@ public class HelloworldController {
 		return "Success";
 	}
 
-	@Scheduled(fixedRate = 2160000)
+	@Scheduled(fixedRate = 60000)
 	public void notificationSchedular() {
 		System.out.println("Schedular Executed");
 	}
