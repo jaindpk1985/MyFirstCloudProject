@@ -60,8 +60,8 @@ public class HelloworldController {
 	@ResponseBody
 	public String saveNumber(@RequestParam String number, @RequestParam String pinCode, @RequestParam String email,
 			@RequestParam String dose, @RequestParam String age, @RequestParam String vaccine) {
-		Statement stmt = Configuration.getStatementFromDB();
-		try {
+		
+		try(Statement stmt = Configuration.getStatementFromDB();) {
 			String insertQuery = "insert into UserNotificationPref values(null,'" + number + "','" + pinCode + "','"
 					+ email + "',CURRENT_TIMESTAMP(),'" + dose + "','" + age + "','" + vaccine + "')";
 			stmt.execute(insertQuery);
@@ -75,8 +75,8 @@ public class HelloworldController {
 				message = message + "\n\nThanks\nBestAtOne.com";
 				sendEmail(email,subject,message);
 			}
-		} catch (SQLException e) {
-			e.printStackTrace();
+		} catch (Exception e) {
+			System.out.println("Error while saving number " + e.getMessage());
 			return "Error";
 		}
 		return "Success";
@@ -84,6 +84,7 @@ public class HelloworldController {
 
 	@Scheduled(fixedRate = 60000)
 	public void notificationSchedular() {
+		sendSlotAvailabilityNotification();
 		System.out.println("Schedular Executed");
 	}
 	
@@ -204,6 +205,8 @@ public class HelloworldController {
 			System.out.println("Mail sent successfully");
 		} catch (MessagingException mex) {
 			System.out.println("send failed, exception: " + mex);
+		}catch (Exception e) {
+			System.out.println("Error while sending email" + e.getStackTrace());
 		}
 	}
 	

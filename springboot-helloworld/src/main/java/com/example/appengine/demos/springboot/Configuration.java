@@ -10,15 +10,15 @@ import javax.mail.Session;
 
 public class Configuration {
 
-	private static final String CONNECTION_URL = "";
-	private static final String DB_USERNAME = "";
-	private static final String DB_PASSCODE = "";
-	private static final String FROM_EMAIL = "";
-	private static final String EMAIL_PASSCODE = "";
+	 private static final String CONNECTION_URL = "";
+		private static final String DB_USERNAME = "";
+		private static final String DB_PASSCODE = "";
+		private static final String FROM_EMAIL = "";
+		private static final String EMAIL_PASSCODE = "";
 	
 	public static Statement getStatementFromDB() {
 		Statement statement = null;
-		try {
+		try{
 			Class.forName("com.mysql.jdbc.Driver");
 			Connection con = DriverManager.getConnection(CONNECTION_URL, DB_USERNAME, DB_PASSCODE);
 			statement = con.createStatement();
@@ -33,8 +33,9 @@ public class Configuration {
 		props.put("mail.smtp.host", "smtp.googlemail.com");
 		props.put("mail.from", FROM_EMAIL);
 		props.put("mail.smtp.starttls.enable", "true");
+		props.put("mail.transport.protocol", "smtp");
 		props.put("mail.smtp.auth", "true");
-		props.setProperty("smtp_port", "25");
+		props.put("mail.smtp.ssl.enable", "true");
 		Session session = Session.getInstance(props, new javax.mail.Authenticator() {
 			protected PasswordAuthentication getPasswordAuthentication() {
 				return new PasswordAuthentication(FROM_EMAIL, EMAIL_PASSCODE);
