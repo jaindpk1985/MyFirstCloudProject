@@ -40,11 +40,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 import org.json.JSONObject ;
 import org.json.JSONArray ;
-import org.json.JSONException;
+import org.apache.log4j.Logger;
 
 
 @RestController
 public class HelloworldController {
+	static Logger logger = Logger.getLogger(HelloworldController.class);
 	private static final String INSTANCE_ID = "YOUR_INSTANCE_ID_HERE";
 	private static final String CLIENT_ID = "YOUR_CLIENT_ID_HERE";
 	private static final String CLIENT_SECRET = "YOUR_CLIENT_SECRET_HERE";
@@ -65,6 +66,7 @@ public class HelloworldController {
 			String insertQuery = "insert into UserNotificationPref values(null,'" + number + "','" + pinCode + "','"
 					+ email + "',CURRENT_TIMESTAMP(),'" + dose + "','" + age + "','" + vaccine + "')";
 			stmt.execute(insertQuery);
+			logger.debug("Data Successfully updated in DB");
 			if(email != null && !email.equals("")) {
 				String subject = "Congrats..Registration Successfull";
 				String message = "Hi,\nYou have been registered for Covid Vaccination Slot Information.\nWe will update you once slots are available.\n";
@@ -76,7 +78,7 @@ public class HelloworldController {
 				sendEmail(email,subject,message);
 			}
 		} catch (Exception e) {
-			System.out.println("Error while saving number " + e.getMessage());
+			logger.error("Error while saving number ",e);
 			return "Error";
 		}
 		return "Success";
@@ -84,14 +86,15 @@ public class HelloworldController {
 
 	@Scheduled(fixedRate = 60000)
 	public void notificationSchedular() {
+		logger.debug("Schedular called successfully");
 		sendSlotAvailabilityNotification();
-		System.out.println("Schedular Executed");
+		logger.debug("Schedular execution complete");
 	}
 	
 	@PostMapping(value = "/fireService")
 	public void fireService() {
 		sendSlotAvailabilityNotification();
-		System.out.println("Schedular Executed Manually");
+		logger.debug("Schedular Executed Manually");
 	}
 
 	public static void sendMessage(String number, String message) throws Exception {
@@ -126,6 +129,7 @@ public class HelloworldController {
 	
 	public static void main(String[] args) throws Exception {
 		sendSlotAvailabilityNotification();
+		logger.debug("Main method called successfully");
 	}
 	
 	public static void sendSlotAvailabilityNotification() {
@@ -134,7 +138,7 @@ public class HelloworldController {
 			
 			for(UserNotificationPreferences userPref : userPrefList) {
 				String jsonResponse =  getCentresDetailByPinCode(userPref.getPincode());
-				System.out.println(jsonResponse);
+				logger.debug(jsonResponse);
 				JSONObject resobj = new JSONObject(jsonResponse);
 				JSONArray centers = (JSONArray)resobj.get("centers");
 				
@@ -146,13 +150,14 @@ public class HelloworldController {
 					String subject = "Slots available for Covid Vaccination";
 					String bodyMessage = "";
 					sendEmail(userPref.getEmail(),subject, getSlotsAvailabilityTemplate(bodyMessage));
+					logger.debug("Notification mail sent successfully");
 				}
 				if(userPref.getNumber() != null) {
 					//sent message to this number
 				}
 			}
 		} catch (Exception e) {
-			System.out.println("Error while sending slot availability notification");
+			logger.error("Error while sending slot availability notification" ,e );
 		}
 	}
 	
@@ -160,8 +165,7 @@ public class HelloworldController {
 		List<UserNotificationPreferences> userPrefList = new ArrayList<>();
 		Statement statement = Configuration.getStatementFromDB();
 		String selectQuery = "select * from UserNotificationPref";
-		try {
-			ResultSet rs = statement.executeQuery(selectQuery);
+		try(ResultSet rs = statement.executeQuery(selectQuery);) {
 			while (rs.next()) {
 				UserNotificationPreferences userPref = new UserNotificationPreferences();
 				userPref.setEmail(rs.getString("email"));
@@ -172,7 +176,7 @@ public class HelloworldController {
 				userPrefList.add(userPref);
 			}
 		} catch (SQLException e) {
-			System.out.println("Error while execution of select query");
+			logger.error("Error while execution of select query",e);
 		}
 		return userPrefList;
 	}
@@ -193,7 +197,7 @@ public class HelloworldController {
 		return jsonResponse;
 	}
 
-	public static void sendEmail(String toEmailId,String subject, String message) {
+	public static void sendEmail(String toEmailId,String subject, String message) throws MessagingException{
 		Session session = Configuration.getMailSessionObj();
 		try {
 			MimeMessage msg = new MimeMessage(session);
@@ -202,11 +206,10 @@ public class HelloworldController {
 			msg.setSubject(subject);
 			msg.setText(message);
 			Transport.send(msg);
-			System.out.println("Mail sent successfully");
+			logger.debug("Mail sent successfully");
 		} catch (MessagingException mex) {
-			System.out.println("send failed, exception: " + mex);
-		}catch (Exception e) {
-			System.out.println("Error while sending email" + e.getStackTrace());
+			logger.error("send failed, exception: " , mex);
+			throw mex;
 		}
 	}
 	

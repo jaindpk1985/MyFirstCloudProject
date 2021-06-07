@@ -10,11 +10,12 @@ import javax.mail.Session;
 
 public class Configuration {
 
-	 private static final String CONNECTION_URL = "";
-		private static final String DB_USERNAME = "";
-		private static final String DB_PASSCODE = "";
-		private static final String FROM_EMAIL = "";
-		private static final String EMAIL_PASSCODE = "";
+    private static final String CONNECTION_URL = "";
+	private static final String DB_USERNAME = "";
+	private static final String DB_PASSCODE = "";
+	private static final String FROM_EMAIL = "";
+	private static final String EMAIL_PASSCODE = "";
+		
 	
 	public static Statement getStatementFromDB() {
 		Statement statement = null;
