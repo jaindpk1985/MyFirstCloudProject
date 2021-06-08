@@ -40,6 +40,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 import org.json.JSONObject ;
 import org.json.JSONArray ;
+import org.json.JSONException;
 import org.apache.log4j.Logger;
 
 
@@ -50,6 +51,16 @@ public class HelloworldController {
 	private static final String CLIENT_ID = "YOUR_CLIENT_ID_HERE";
 	private static final String CLIENT_SECRET = "YOUR_CLIENT_SECRET_HERE";
 	private static final String GATEWAY_URL = "http://api.whatsmate.net/v1/telegram/single/message/" + INSTANCE_ID;
+	public static final DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
+	public static final String BORDER_STYLE = "border: 1px solid black;border-collapse: collapse;text-align: center;";
+	public static final String BORDER_COLOR = "background-color:#ADD8E6;";
+	public static final String MESSAGE_BODY = "Hi,<br>Slots are available on below Centres.<br><br>searchParams<br><table>tableBody</table><br><a href='https://selfregistration.cowin.gov.in/'>Book Slot</a><br><br>Thanks<br>BestAtOne.com";
+	public static final String SEARCH_TEXT = "<strong>Pincode:</strong> pincodeVal, <strong>Dose:</strong> doseVal <br> <strong>Age:</strong> ageVal, <strong>Vaccine:</strong> vaccineVal";
+	public static final String TABLE_HEADER_TEXT = "<tr><th style ='"+BORDER_STYLE + BORDER_COLOR +"' >Centre</th><th style ='"+BORDER_STYLE + BORDER_COLOR +"' >strDate1</th><th style ='"+BORDER_STYLE+ BORDER_COLOR +"' >strDate2</th><th style ='"+BORDER_STYLE+ BORDER_COLOR +"' >strDate3</th><th style ='"+BORDER_STYLE+ BORDER_COLOR +"' >strDate4</th></tr>";
+	public static final String MESSAGE_ROW_TEXT = "<tr><td style ='"+BORDER_STYLE +"'>centreDetailStr</td><td style ='"+BORDER_STYLE +"'>day1Slot</td><td style ='"+BORDER_STYLE +"'>day2Slot</td><td style ='"+BORDER_STYLE +"'>day3Slot</td><td style ='"+BORDER_STYLE +"'>day4Slot</td></tr>";
+	public static final String SLOT_MESSAGE_SUBJECT = "Slots available for Covid Vaccination";
+	public static final String CENTRE_DETAIL_TEXT = "<strong>centreName(feeType)</strong><br>centreAddress";
+	public static final String SLOT_TEXT = "<div style='background-color:green;color:yellow'>slot</div>";
 
 	@GetMapping("/")
 	public String hello() {
@@ -75,16 +86,16 @@ public class HelloworldController {
 				message = message + "Age:-" + age+ "\n";
 				message = message + "Vaccine:-" + vaccine + "\n";
 				message = message + "\n\nThanks\nBestAtOne.com";
-				sendEmail(email,subject,message);
+				sendEmail(email,subject,message,"text");
 			}
 		} catch (Exception e) {
 			logger.error("Error while saving number ",e);
-			return "Error";
+			return e.getCause().getMessage();
 		}
 		return "Success";
 	}
 
-	@Scheduled(fixedRate = 60000)
+	@Scheduled(fixedRate = 360000)
 	public void notificationSchedular() {
 		logger.debug("Schedular called successfully");
 		sendSlotAvailabilityNotification();
@@ -135,30 +146,143 @@ public class HelloworldController {
 	public static void sendSlotAvailabilityNotification() {
         try {
 			List<UserNotificationPreferences> userPrefList = getAllUserNotiPref();
-			
 			for(UserNotificationPreferences userPref : userPrefList) {
-				String jsonResponse =  getCentresDetailByPinCode(userPref.getPincode());
-				logger.debug(jsonResponse);
-				JSONObject resobj = new JSONObject(jsonResponse);
-				JSONArray centers = (JSONArray)resobj.get("centers");
-				
-				for (int i = 0; i < centers.length(); i++) {
-					JSONObject objects = centers.getJSONObject(i);
-				}
-				if(userPref.getEmail() != null) {
-					//sent mail to this email id
-					String subject = "Slots available for Covid Vaccination";
-					String bodyMessage = "";
-					sendEmail(userPref.getEmail(),subject, getSlotsAvailabilityTemplate(bodyMessage));
-					logger.debug("Notification mail sent successfully");
-				}
-				if(userPref.getNumber() != null) {
-					//sent message to this number
-				}
+				sendNotificationByPref(userPref);
 			}
 		} catch (Exception e) {
 			logger.error("Error while sending slot availability notification" ,e );
 		}
+	}
+
+	private static void sendNotificationByPref(UserNotificationPreferences userPref)
+			throws Exception, JSONException, MessagingException {
+		String jsonResponse =  getCentresDetailByPinCode(userPref.getPincode());
+		logger.debug(jsonResponse);
+		JSONObject resobj = new JSONObject(jsonResponse);
+		JSONArray centers = (JSONArray)resobj.get("centers");
+		
+		Date date = Calendar.getInstance().getTime();  
+		String strDate1 = dateFormat.format(date);  
+		String strDate2 = getNextDayInString(1);
+		String strDate3 = getNextDayInString(2);
+		String strDate4 = getNextDayInString(3);
+		String rowDetail  = "";
+		for (int i = 0; i < centers.length(); i++) {
+			JSONObject centre = centers.getJSONObject(i);
+			rowDetail  = rowDetail + getRow(userPref, centre,strDate1,strDate2,strDate3,strDate4);
+		}
+		
+		if(userPref.getEmail() != null) {
+			String searchParamTextVal = SEARCH_TEXT.replace("pincodeVal", userPref.getPincode())
+					.replace("doseVal",userPref.getDose()).replace("ageVal", userPref.getAge()).replace("vaccineVal",userPref.getVaccine());
+			String headerString = getHeader(strDate1,strDate2,strDate3,strDate4);
+			String tableBody = headerString + rowDetail;
+			String messageBody = MESSAGE_BODY.replace("searchParams",searchParamTextVal).replace("tableBody",tableBody);
+			sendEmail(userPref.getEmail(),SLOT_MESSAGE_SUBJECT, messageBody,"text/html");
+			logger.debug("Notification mail sent successfully");
+		}
+		if(userPref.getNumber() != null) {
+			//sent message to this number
+		}
+	}
+	
+	private static String getRow(UserNotificationPreferences userPref, JSONObject centre,String strDate1,String strDate2,String strDate3,String strDate4) throws JSONException {
+		String rowStr = "";
+		String feeType = (String)centre.get("fee_type");
+		String feesText = "";
+		if("Paid".equals(feeType)) {
+			JSONArray feeDetails = (JSONArray)centre.get("vaccine_fees");
+			feesText = getFeesText(userPref,feeDetails);
+		}
+		String feeTypeText = feeType + feesText;
+		String centreDetailStr = CENTRE_DETAIL_TEXT.replace("centreName", (String) centre.get("name"))
+				.replace("feeType", feeTypeText).replace("centreAddress", (String) centre.get("address"));
+		JSONArray allDatesData = getApplicableAgeData(userPref, centre);
+		String day1Slot = "NA";
+		String day2Slot = "NA";
+		String day3Slot = "NA";
+		String day4Slot = "NA";
+		for (int i = 0; i < allDatesData.length(); i++) {
+			JSONObject dateData = allDatesData.getJSONObject(i);
+			if(strDate1.equals(dateData.get("date"))) {
+				day1Slot = validateAndGetSlot(userPref, dateData);
+			}
+			if(strDate2.equals(dateData.get("date"))) {
+				day2Slot = validateAndGetSlot(userPref, dateData);
+			}
+			if(strDate3.equals(dateData.get("date"))) {
+				day3Slot = validateAndGetSlot(userPref, dateData);
+			}
+			if(strDate4.equals(dateData.get("date"))) {
+				day4Slot = validateAndGetSlot(userPref, dateData);
+			}
+		}
+		if("NA".equals(day1Slot) && "NA".equals(day2Slot) && "NA".equals(day3Slot) && "NA".equals(day4Slot)) {
+			return rowStr;
+		}
+		rowStr = MESSAGE_ROW_TEXT.replace("centreDetailStr", centreDetailStr).replace("day1Slot", day1Slot)
+				.replace("day2Slot", day2Slot).replace("day3Slot", day3Slot).replace("day4Slot", day4Slot);
+		return rowStr;
+	}
+	
+	public static String validateAndGetSlot(UserNotificationPreferences userPref, JSONObject dateData) throws JSONException {
+		String slot = "NA";
+		if(checkAgeLimit(userPref,(int)dateData.get("min_age_limit")) && checkVaccine(userPref, (String)dateData.get("vaccine"))){
+			if("Dose2".equals(userPref.getDose()) && (int)dateData.get("available_capacity_dose2") > 0){
+				slot = String.valueOf((int)dateData.get("available_capacity_dose2"));
+				slot = SLOT_TEXT.replace("slot",slot);
+			}
+			else if("Dose1".equals(userPref.getDose()) && (int)dateData.get("available_capacity_dose1")> 0){
+				slot = String.valueOf((int)dateData.get("available_capacity_dose1"));
+				slot = SLOT_TEXT.replace("slot",slot);
+			}
+		}
+		return slot;
+	}
+	
+	private static boolean checkVaccine(UserNotificationPreferences userPref, String vaccine) {
+		if("COVAXIN".equals(userPref.getVaccine()) && "COVAXIN".equals(vaccine) || "COVISHIELD".equals(userPref.getVaccine()) && "COVISHIELD".equals(vaccine)){
+			return true;
+		}
+		return false;
+	}
+	
+	private static JSONArray getApplicableAgeData(UserNotificationPreferences userPref, JSONObject centre) throws JSONException {
+		JSONArray filteredData = new JSONArray();
+		JSONArray sessions = (JSONArray)centre.get("sessions");
+		for (int i = 0; i < sessions.length(); i++) {
+			JSONObject session = sessions.getJSONObject(i);
+			int ageLimit = (int)session.get("min_age_limit");
+			if(checkAgeLimit(userPref, ageLimit)) {
+				filteredData.put(session);
+			}
+		}
+		return filteredData;
+	}
+	
+	private static boolean checkAgeLimit(UserNotificationPreferences userPref, int min_age_limit){
+		if("Age18".equals(userPref.getAge()) && min_age_limit == 18 || "Age45".equals(userPref.getAge()) && min_age_limit == 45){
+			return true;
+		}
+		return false;
+   }
+	
+	private static String getFeesText(UserNotificationPreferences userPref, JSONArray feeDetails) throws JSONException {
+		String feesStr = "";
+		for (int i = 0; i < feeDetails.length(); i++) {
+			JSONObject fees = feeDetails.getJSONObject(i);
+			String vaccine = (String)fees.get("vaccine");
+			if(vaccine.equals(userPref.getVaccine())) {
+				feesStr = (String)fees.get("fee");
+				feesStr = " , " + feesStr + "/-";
+			}
+		}
+		return feesStr;
+	}
+	
+	private static String getHeader(String strDate1, String strDate2, String strDate3, String strDate4) {
+		return TABLE_HEADER_TEXT.replace("strDate1", strDate1).replace("strDate2", strDate2)
+				.replace("strDate3", strDate3).replace("strDate4", strDate4);
 	}
 	
 	public static List<UserNotificationPreferences> getAllUserNotiPref() {
@@ -183,7 +307,6 @@ public class HelloworldController {
 	
 	public static String getCentresDetailByPinCode(String pincode)  throws Exception{
 		Date date = Calendar.getInstance().getTime();  
-		DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");  
 		String strDate = dateFormat.format(date);  
 		URL url = new URL("https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByPin?pincode=" + pincode + "&date=" + strDate);
 		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -196,28 +319,33 @@ public class HelloworldController {
 			        .collect(Collectors.joining("\n"));
 		return jsonResponse;
 	}
+	
+	public static String getNextDayInString(int days) {
+		Calendar c = Calendar.getInstance();
+		c.add(Calendar.DAY_OF_MONTH, days);
+		String newDate = dateFormat.format(c.getTime());
+		return newDate;
+	}
 
-	public static void sendEmail(String toEmailId,String subject, String message) throws MessagingException{
+	public static void sendEmail(String toEmailId,String subject, String message, String contentType) throws MessagingException{
 		Session session = Configuration.getMailSessionObj();
 		try {
 			MimeMessage msg = new MimeMessage(session);
 			msg.setFrom();
 			msg.setRecipients(Message.RecipientType.TO, toEmailId);
 			msg.setSubject(subject);
-			msg.setText(message);
+			if("text".equals(contentType)) {
+				msg.setText(message);
+			}
+			else {
+				msg.setContent(message, "text/html");
+			}
 			Transport.send(msg);
 			logger.debug("Mail sent successfully");
 		} catch (MessagingException mex) {
 			logger.error("send failed, exception: " , mex);
 			throw mex;
 		}
-	}
-	
-	public static String getSlotsAvailabilityTemplate(String slotMessage) {
-		String message = "Hi,\nSlots are available on below Centres\n";
-		message = message + slotMessage + "\n\n";
-		message = message + "\n\nThanks\nBestAtOne.com";
-		return message;
 	}
 
 }
