@@ -12,6 +12,7 @@ public class UserNotificationPreferences {
 	private String dose;
 	private String age;
 	private String vaccine;
+	private String notificationSent;
 	
 	public Long getId() {
 		return id;
@@ -60,5 +61,11 @@ public class UserNotificationPreferences {
 	}
 	public void setVaccine(String vaccine) {
 		this.vaccine = vaccine;
+	}
+	public String getNotificationSent() {
+		return notificationSent;
+	}
+	public void setNotificationSent(String notificationSent) {
+		this.notificationSent = notificationSent;
 	}
 }

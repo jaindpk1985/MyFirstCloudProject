@@ -1,18 +1,3 @@
-/*
- * Copyright 2017 Google Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
 package com.example.appengine.demos.springboot;
 
@@ -54,12 +39,13 @@ public class HelloworldController {
 	public static final DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
 	public static final String BORDER_STYLE = "border: 1px solid black;border-collapse: collapse;text-align: center;";
 	public static final String BORDER_COLOR = "background-color:#ADD8E6;";
+	public static final String REGISTRATION_MESSAGE_BODY = "Hi,<br>You have been registered for Covid Vaccination Slot Information.<br>We will update you once slots are available with below criteria.<table style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><tr><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Pincode:</strong> pincodeVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Dose:</strong> doseVal</td></tr><tr><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Age:</strong> ageVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Vaccine:</strong> vaccineVal</td></tr></table><br><br>Thanks<br>BestAtOne.com";
 	public static final String MESSAGE_BODY = "Hi,<br>Slots are available on below Centres.<br><br>searchParams<br><table>tableBody</table><br><a href='https://selfregistration.cowin.gov.in/'>Book Slot</a><br><br>Thanks<br>BestAtOne.com";
 	public static final String SEARCH_TEXT = "<strong>Pincode:</strong> pincodeVal, <strong>Dose:</strong> doseVal <br> <strong>Age:</strong> ageVal, <strong>Vaccine:</strong> vaccineVal";
 	public static final String TABLE_HEADER_TEXT = "<tr><th style ='"+BORDER_STYLE + BORDER_COLOR +"' >Centre</th><th style ='"+BORDER_STYLE + BORDER_COLOR +"' >strDate1</th><th style ='"+BORDER_STYLE+ BORDER_COLOR +"' >strDate2</th><th style ='"+BORDER_STYLE+ BORDER_COLOR +"' >strDate3</th><th style ='"+BORDER_STYLE+ BORDER_COLOR +"' >strDate4</th></tr>";
 	public static final String MESSAGE_ROW_TEXT = "<tr><td style ='"+BORDER_STYLE +"'>centreDetailStr</td><td style ='"+BORDER_STYLE +"'>day1Slot</td><td style ='"+BORDER_STYLE +"'>day2Slot</td><td style ='"+BORDER_STYLE +"'>day3Slot</td><td style ='"+BORDER_STYLE +"'>day4Slot</td></tr>";
 	public static final String SLOT_MESSAGE_SUBJECT = "Slots available for Covid Vaccination";
-	public static final String CENTRE_DETAIL_TEXT = "<strong>centreName(feeType)</strong><br>centreAddress";
+	public static final String CENTRE_DETAIL_TEXT = "<strong>centreName(<span style='background-color:yellow;'>feeType</span>)</strong><br>centreAddress";
 	public static final String SLOT_TEXT = "<div style='background-color:green;color:yellow'>slot</div>";
 
 	@GetMapping("/")
@@ -74,38 +60,45 @@ public class HelloworldController {
 			@RequestParam String dose, @RequestParam String age, @RequestParam String vaccine) {
 		
 		try(Statement stmt = Configuration.getStatementFromDB();) {
-			String insertQuery = "insert into UserNotificationPref values(null,'" + number + "','" + pinCode + "','"
-					+ email + "',CURRENT_TIMESTAMP(),'" + dose + "','" + age + "','" + vaccine + "')";
+			String insertQuery = "insert into UserNotificationPref(number,pinCode,email,reg_date,dose,age,vaccine,notification_sent) values('" + number + "','" + pinCode + "','"
+					+ email + "',CURRENT_TIMESTAMP(),'" + dose + "','" + age + "','" + vaccine + "',null)";
 			stmt.execute(insertQuery);
 			logger.debug("Data Successfully updated in DB");
 			if(email != null && !email.equals("")) {
 				String subject = "Congrats..Registration Successfull";
-				String message = "Hi,\nYou have been registered for Covid Vaccination Slot Information.\nWe will update you once slots are available.\n";
-				message = message + "Pincode:-" + pinCode + "\n";
-				message = message + "Dose:-" + dose + "\n";
-				message = message + "Age:-" + age+ "\n";
-				message = message + "Vaccine:-" + vaccine + "\n";
-				message = message + "\n\nThanks\nBestAtOne.com";
-				sendEmail(email,subject,message,"text");
+				String message = REGISTRATION_MESSAGE_BODY.replace("pincodeVal",pinCode).replace("doseVal",dose).replace("ageVal",age).replace("vaccineVal",vaccine);
+				sendEmail(email,subject,message,"text/html");
 			}
 		} catch (Exception e) {
 			logger.error("Error while saving number ",e);
-			return e.getCause().getMessage();
+			if(e.getCause() != null) {
+				return e.getCause().getMessage();
+			}else {
+				return e.getMessage();
+			}
 		}
 		return "Success";
 	}
-
-	@Scheduled(fixedRate = 360000)
+	//on each 5 minutes
+	@Scheduled(fixedRate = 180000)
 	public void notificationSchedular() {
 		logger.debug("Schedular called successfully");
 		sendSlotAvailabilityNotification();
 		logger.debug("Schedular execution complete");
 	}
 	
-	@PostMapping(value = "/fireService")
-	public void fireService() {
-		sendSlotAvailabilityNotification();
-		logger.debug("Schedular Executed Manually");
+	//@Scheduled(fixedRate = 300000)
+	public void notificationClearSchedular() {
+		logger.debug("Clear Schedular called successfully");
+		resetAllUserPref();
+		logger.debug("Clear Schedular executed successfully");
+	}
+	
+	@GetMapping(value = "/fireService")
+	public String fireService() {
+		resetAllUserPref();
+		logger.debug("Reset Schedular Executed Manually");
+		return "Preferences are Reset successfully";
 	}
 
 	public static void sendMessage(String number, String message) throws Exception {
@@ -172,6 +165,11 @@ public class HelloworldController {
 			rowDetail  = rowDetail + getRow(userPref, centre,strDate1,strDate2,strDate3,strDate4);
 		}
 		
+		if(rowDetail.trim().length() == 0) {
+			//no need to send notification for this case.
+			return;
+		}
+		
 		if(userPref.getEmail() != null) {
 			String searchParamTextVal = SEARCH_TEXT.replace("pincodeVal", userPref.getPincode())
 					.replace("doseVal",userPref.getDose()).replace("ageVal", userPref.getAge()).replace("vaccineVal",userPref.getVaccine());
@@ -180,6 +178,8 @@ public class HelloworldController {
 			String messageBody = MESSAGE_BODY.replace("searchParams",searchParamTextVal).replace("tableBody",tableBody);
 			sendEmail(userPref.getEmail(),SLOT_MESSAGE_SUBJECT, messageBody,"text/html");
 			logger.debug("Notification mail sent successfully");
+			//update userpref in DB notification_sent = 'Y'
+			updateUserPrefNotiSent(userPref);
 		}
 		if(userPref.getNumber() != null) {
 			//sent message to this number
@@ -288,21 +288,41 @@ public class HelloworldController {
 	public static List<UserNotificationPreferences> getAllUserNotiPref() {
 		List<UserNotificationPreferences> userPrefList = new ArrayList<>();
 		Statement statement = Configuration.getStatementFromDB();
-		String selectQuery = "select * from UserNotificationPref";
+		String selectQuery = "select * from UserNotificationPref where notification_sent is null";
 		try(ResultSet rs = statement.executeQuery(selectQuery);) {
 			while (rs.next()) {
 				UserNotificationPreferences userPref = new UserNotificationPreferences();
+				userPref.setId(rs.getLong("id"));
 				userPref.setEmail(rs.getString("email"));
 				userPref.setPincode(rs.getString("pinCode"));
 				userPref.setDose(rs.getString("dose"));
 				userPref.setAge(rs.getString("age"));
 				userPref.setVaccine(rs.getString("vaccine"));
+				userPref.setNotificationSent(rs.getString("notification_sent"));
 				userPrefList.add(userPref);
 			}
 		} catch (SQLException e) {
 			logger.error("Error while execution of select query",e);
 		}
 		return userPrefList;
+	}
+	
+	public static void updateUserPrefNotiSent(UserNotificationPreferences userPref) {
+		String updateQuery = "update UserNotificationPref set notification_sent = 'Y' where id =" + userPref.getId();
+		try (Statement statement = Configuration.getStatementFromDB()) {
+			statement.executeUpdate(updateQuery);
+		} catch (SQLException e) {
+			logger.error("Error while udpating status in DB", e);
+		}
+	}
+	
+	public static void resetAllUserPref() {
+		String updateQuery = "update UserNotificationPref set notification_sent = null where notification_sent = 'Y'";
+		try (Statement statement = Configuration.getStatementFromDB()) {
+			statement.executeUpdate(updateQuery);
+		} catch (SQLException e) {
+			logger.error("Error while udpating status in DB", e);
+		}
 	}
 	
 	public static String getCentresDetailByPinCode(String pincode)  throws Exception{
