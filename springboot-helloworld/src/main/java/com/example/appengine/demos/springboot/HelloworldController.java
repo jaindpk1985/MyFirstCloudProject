@@ -87,8 +87,16 @@ public class HelloworldController {
 		logger.debug("Schedular execution complete");
 	}
 	
-	//@Scheduled(fixedRate = 300000)
-	public void notificationClearSchedular() {
+	//7:00 am
+	@Scheduled(cron = "0 7 * * *")
+	public void notificationClearSchedularMor() {
+		logger.debug("Clear Schedular called successfully");
+		resetAllUserPref();
+		logger.debug("Clear Schedular executed successfully");
+	}
+	
+	@Scheduled(cron = "0 18 * * *")
+	public void notificationClearSchedularEven() {
 		logger.debug("Clear Schedular called successfully");
 		resetAllUserPref();
 		logger.debug("Clear Schedular executed successfully");
