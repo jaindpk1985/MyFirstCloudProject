@@ -88,14 +88,14 @@ public class HelloworldController {
 	}
 	
 	//7:00 am
-	@Scheduled(cron = "0 7 * * *")
+	@Scheduled(cron = "0 0 7 * * *")
 	public void notificationClearSchedularMor() {
 		logger.debug("Clear Schedular called successfully");
 		resetAllUserPref();
 		logger.debug("Clear Schedular executed successfully");
 	}
 	
-	@Scheduled(cron = "0 18 * * *")
+	@Scheduled(cron = "0 0 18 * * *")
 	public void notificationClearSchedularEven() {
 		logger.debug("Clear Schedular called successfully");
 		resetAllUserPref();
