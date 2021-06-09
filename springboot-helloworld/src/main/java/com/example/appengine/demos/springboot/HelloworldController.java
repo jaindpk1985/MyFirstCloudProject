@@ -39,8 +39,8 @@ public class HelloworldController {
 	public static final DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
 	public static final String BORDER_STYLE = "border: 1px solid black;border-collapse: collapse;text-align: center;";
 	public static final String BORDER_COLOR = "background-color:#ADD8E6;";
-	public static final String REGISTRATION_MESSAGE_BODY = "Hi,<br>You have been registered for Covid Vaccination Slot Information.<br>We will update you once slots are available with below criteria.<table style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><tr><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Pincode:</strong> pincodeVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Dose:</strong> doseVal</td></tr><tr><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Age:</strong> ageVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Vaccine:</strong> vaccineVal</td></tr></table><br><br>Thanks<br>BestAtOne.com";
-	public static final String MESSAGE_BODY = "Hi,<br>Slots are available on below Centres.<br><br>searchParams<br><table>tableBody</table><br><a href='https://selfregistration.cowin.gov.in/'>Book Slot</a><br><br>Thanks<br>BestAtOne.com";
+	public static final String REGISTRATION_MESSAGE_BODY = "Hi,<br>You have been registered for Covid Vaccination Slot Information.<br>We will update you once slots are available with below criteria.<table style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><tr><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Pincode:</strong> pincodeVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Dose:</strong> doseVal</td></tr><tr><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Age:</strong> ageVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Vaccine:</strong> vaccineVal</td></tr></table><br><a href='http://bestatone.com/covid-vaccination/'>Click to Register for another filter as well</a><br><br>Thanks<br>BestAtOne.com";
+	public static final String MESSAGE_BODY = "Hi,<br>Slots are available on below Centres.<br><br>searchParams<br><table>tableBody</table><br><a href='https://selfregistration.cowin.gov.in/'>Click to Book Slot</a><br><a href='http://bestatone.com/covid-vaccination/'>Click to Register for another filter as well</a><br><br>Thanks<br>BestAtOne.com";
 	public static final String SEARCH_TEXT = "<strong>Pincode:</strong> pincodeVal, <strong>Dose:</strong> doseVal <br> <strong>Age:</strong> ageVal, <strong>Vaccine:</strong> vaccineVal";
 	public static final String TABLE_HEADER_TEXT = "<tr><th style ='"+BORDER_STYLE + BORDER_COLOR +"' >Centre</th><th style ='"+BORDER_STYLE + BORDER_COLOR +"' >strDate1</th><th style ='"+BORDER_STYLE+ BORDER_COLOR +"' >strDate2</th><th style ='"+BORDER_STYLE+ BORDER_COLOR +"' >strDate3</th><th style ='"+BORDER_STYLE+ BORDER_COLOR +"' >strDate4</th></tr>";
 	public static final String MESSAGE_ROW_TEXT = "<tr><td style ='"+BORDER_STYLE +"'>centreDetailStr</td><td style ='"+BORDER_STYLE +"'>day1Slot</td><td style ='"+BORDER_STYLE +"'>day2Slot</td><td style ='"+BORDER_STYLE +"'>day3Slot</td><td style ='"+BORDER_STYLE +"'>day4Slot</td></tr>";
@@ -88,14 +88,14 @@ public class HelloworldController {
 	}
 	
 	//7:00 am
-	@Scheduled(cron = "0 0 7 * * *")
+	@Scheduled(cron = "0 10 7 * * *")
 	public void notificationClearSchedularMor() {
 		logger.debug("Clear Schedular called successfully");
 		resetAllUserPref();
 		logger.debug("Clear Schedular executed successfully");
 	}
 	
-	@Scheduled(cron = "0 0 18 * * *")
+	@Scheduled(cron = "0 10 18 * * *")
 	public void notificationClearSchedularEven() {
 		logger.debug("Clear Schedular called successfully");
 		resetAllUserPref();
@@ -140,8 +140,9 @@ public class HelloworldController {
 
 	
 	public static void main(String[] args) throws Exception {
-		sendSlotAvailabilityNotification();
+		//sendSlotAvailabilityNotification();
 		logger.debug("Main method called successfully");
+
 	}
 	
 	public static void sendSlotAvailabilityNotification() {
@@ -360,7 +361,7 @@ public class HelloworldController {
 		try {
 			MimeMessage msg = new MimeMessage(session);
 			msg.setFrom();
-			msg.setRecipients(Message.RecipientType.TO, toEmailId);
+			msg.setRecipients(javax.mail.Message.RecipientType.TO, toEmailId);
 			msg.setSubject(subject);
 			if("text".equals(contentType)) {
 				msg.setText(message);
