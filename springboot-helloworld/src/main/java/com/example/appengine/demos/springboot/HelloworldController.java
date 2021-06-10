@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.scheduling.annotation.Scheduled;
 import java.sql.*;
 import java.io.BufferedReader;
-import java.io.OutputStream;
 import java.io.InputStreamReader;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -32,22 +31,24 @@ import org.apache.log4j.Logger;
 @RestController
 public class HelloworldController {
 	static Logger logger = Logger.getLogger(HelloworldController.class);
-	private static final String INSTANCE_ID = "YOUR_INSTANCE_ID_HERE";
-	private static final String CLIENT_ID = "YOUR_CLIENT_ID_HERE";
-	private static final String CLIENT_SECRET = "YOUR_CLIENT_SECRET_HERE";
-	private static final String GATEWAY_URL = "http://api.whatsmate.net/v1/telegram/single/message/" + INSTANCE_ID;
 	public static final DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
 	public static final String BORDER_STYLE = "border: 1px solid black;border-collapse: collapse;text-align: center;";
 	public static final String BORDER_COLOR = "background-color:#ADD8E6;";
-	public static final String REGISTRATION_MESSAGE_BODY = "Hi,<br>You have been registered for Covid Vaccination Slot Information.<br>We will update you once slots are available with below criteria.<table style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><tr><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Pincode:</strong> pincodeVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Dose:</strong> doseVal</td></tr><tr><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Age:</strong> ageVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:Violet;'><strong>Vaccine:</strong> vaccineVal</td></tr></table><br><a href='http://bestatone.com/covid-vaccination/'>Click to Register for another filter as well</a><br><br>Thanks<br>BestAtOne.com";
-	public static final String MESSAGE_BODY = "Hi,<br>Slots are available on below Centres.<br><br>searchParams<br><table>tableBody</table><br><a href='https://selfregistration.cowin.gov.in/'>Click to Book Slot</a><br><a href='http://bestatone.com/covid-vaccination/'>Click to Register for another filter as well</a><br><br>Thanks<br>BestAtOne.com";
+	public static final String REGISTRATION_MESSAGE_BODY = "Hi,<br>You have been registered for Covid Vaccination Slot Information.<br>We will update you once slots are available with below filter.<table style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><tr><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Pincode:</strong> pincodeVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Dose:</strong> doseVal</td></tr><tr><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Vaccine:</strong> vaccineVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Age:</strong> ageVal</td></tr></table><br><a href='http://bestatone.com/covid-vaccination/'>Click to Register for another filter as well</a><br><br>Thanks<br>BestAtOne.com";
+	public static final String MESSAGE_BODY = "Hi,<br>Slots are available on below Centres.<br><br>searchParams<br><table>tableBody</table><br><a href='https://selfregistration.cowin.gov.in/'>Click to Book Slot</a><br><br><a href='http://bestatone.com/covid-vaccination/'>Click to Register for another filter as well</a><br><br>Thanks<br>BestAtOne.com";
 	public static final String SEARCH_TEXT = "<strong>Pincode:</strong> pincodeVal, <strong>Dose:</strong> doseVal <br> <strong>Age:</strong> ageVal, <strong>Vaccine:</strong> vaccineVal";
 	public static final String TABLE_HEADER_TEXT = "<tr><th style ='"+BORDER_STYLE + BORDER_COLOR +"' >Centre</th><th style ='"+BORDER_STYLE + BORDER_COLOR +"' >strDate1</th><th style ='"+BORDER_STYLE+ BORDER_COLOR +"' >strDate2</th><th style ='"+BORDER_STYLE+ BORDER_COLOR +"' >strDate3</th><th style ='"+BORDER_STYLE+ BORDER_COLOR +"' >strDate4</th></tr>";
 	public static final String MESSAGE_ROW_TEXT = "<tr><td style ='"+BORDER_STYLE +"'>centreDetailStr</td><td style ='"+BORDER_STYLE +"'>day1Slot</td><td style ='"+BORDER_STYLE +"'>day2Slot</td><td style ='"+BORDER_STYLE +"'>day3Slot</td><td style ='"+BORDER_STYLE +"'>day4Slot</td></tr>";
-	public static final String SLOT_MESSAGE_SUBJECT = "Slots available for Covid Vaccination";
+	public static final String SLOT_MESSAGE_SUBJECT = "Slots available for Covid Vaccination as on strDate";
 	public static final String CENTRE_DETAIL_TEXT = "<strong>centreName(<span style='background-color:yellow;'>feeType</span>)</strong><br>centreAddress";
 	public static final String SLOT_TEXT = "<div style='background-color:green;color:yellow'>slot</div>";
 
+	public static void main(String[] args) throws Exception {
+		sendSlotAvailabilityNotification();
+		logger.debug("Main method called successfully");
+
+	}
+	
 	@GetMapping("/")
 	public String hello() {
 		return "Hello world - Deepak Jain came to Cloud";
@@ -79,7 +80,7 @@ public class HelloworldController {
 		}
 		return "Success";
 	}
-	//on each 5 minutes
+	//on each 3 minutes
 	@Scheduled(fixedRate = 180000)
 	public void notificationSchedular() {
 		logger.debug("Schedular called successfully");
@@ -108,61 +109,25 @@ public class HelloworldController {
 		logger.debug("Reset Schedular Executed Manually");
 		return "Preferences are Reset successfully";
 	}
-
-	public static void sendMessage(String number, String message) throws Exception {
-		String jsonPayload = new StringBuilder().append("{").append("\"number\":\"").append(number).append("\",")
-				.append("\"message\":\"").append(message).append("\"").append("}").toString();
-
-		URL url = new URL(GATEWAY_URL);
-		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-		conn.setDoOutput(true);
-		conn.setRequestMethod("POST");
-		conn.setRequestProperty("X-WM-CLIENT-ID", CLIENT_ID);
-		conn.setRequestProperty("X-WM-CLIENT-SECRET", CLIENT_SECRET);
-		conn.setRequestProperty("Content-Type", "application/json");
-
-		OutputStream os = conn.getOutputStream();
-		os.write(jsonPayload.getBytes());
-		os.flush();
-		os.close();
-
-		int statusCode = conn.getResponseCode();
-		System.out.println("Response from Telegram Gateway: \n");
-		System.out.println("Status Code: " + statusCode);
-		BufferedReader br = new BufferedReader(
-				new InputStreamReader((statusCode == 200) ? conn.getInputStream() : conn.getErrorStream()));
-		String output;
-		while ((output = br.readLine()) != null) {
-			System.out.println(output);
-		}
-		conn.disconnect();
-	}
-
-	
-	public static void main(String[] args) throws Exception {
-		//sendSlotAvailabilityNotification();
-		logger.debug("Main method called successfully");
-
-	}
 	
 	public static void sendSlotAvailabilityNotification() {
         try {
 			List<UserNotificationPreferences> userPrefList = getAllUserNotiPref();
+			Map<String,String> pinResponseMap = getDistinctPinDataOfUsers();
 			for(UserNotificationPreferences userPref : userPrefList) {
-				sendNotificationByPref(userPref);
+				sendNotificationByPref(userPref,pinResponseMap);
 			}
 		} catch (Exception e) {
 			logger.error("Error while sending slot availability notification" ,e );
 		}
 	}
 
-	private static void sendNotificationByPref(UserNotificationPreferences userPref)
+	private static void sendNotificationByPref(UserNotificationPreferences userPref, Map<String,String> pinResponseMap)
 			throws Exception, JSONException, MessagingException {
-		String jsonResponse =  getCentresDetailByPinCode(userPref.getPincode());
-		logger.debug(jsonResponse);
+		String jsonResponse =  pinResponseMap.get(userPref.getPincode());
 		JSONObject resobj = new JSONObject(jsonResponse);
 		JSONArray centers = (JSONArray)resobj.get("centers");
-		
+		centers = sortJsonArray(centers);
 		Date date = Calendar.getInstance().getTime();  
 		String strDate1 = dateFormat.format(date);  
 		String strDate2 = getNextDayInString(1);
@@ -173,7 +138,6 @@ public class HelloworldController {
 			JSONObject centre = centers.getJSONObject(i);
 			rowDetail  = rowDetail + getRow(userPref, centre,strDate1,strDate2,strDate3,strDate4);
 		}
-		
 		if(rowDetail.trim().length() == 0) {
 			//no need to send notification for this case.
 			return;
@@ -185,7 +149,7 @@ public class HelloworldController {
 			String headerString = getHeader(strDate1,strDate2,strDate3,strDate4);
 			String tableBody = headerString + rowDetail;
 			String messageBody = MESSAGE_BODY.replace("searchParams",searchParamTextVal).replace("tableBody",tableBody);
-			sendEmail(userPref.getEmail(),SLOT_MESSAGE_SUBJECT, messageBody,"text/html");
+			sendEmail(userPref.getEmail(),SLOT_MESSAGE_SUBJECT.replace("strDate",strDate1), messageBody,"text/html");
 			logger.debug("Notification mail sent successfully");
 			//update userpref in DB notification_sent = 'Y'
 			updateUserPrefNotiSent(userPref);
@@ -247,6 +211,37 @@ public class HelloworldController {
 			}
 		}
 		return slot;
+	}
+	
+	public static JSONArray sortJsonArray(JSONArray jsonArray) throws JSONException {
+		JSONArray sortedJsonArray = new JSONArray();
+		try {
+			List<JSONObject> myJsonArrayAsList = new ArrayList();
+			for (int i = 0; i < jsonArray.length(); i++) {
+				myJsonArrayAsList.add(jsonArray.getJSONObject(i));
+			}
+			Collections.sort(myJsonArrayAsList, new Comparator<JSONObject>() {
+				@Override
+				public int compare(JSONObject jsonObjectA, JSONObject jsonObjectB) {
+					int compare = 0;
+					try {
+						String keyA = jsonObjectA.getString("name");
+						String keyB = jsonObjectB.getString("name");
+						compare = keyA.compareTo(keyB);
+					} catch (JSONException e) {
+						logger.error("Error while comparing", e);
+					}
+					return compare;
+				}
+			});
+			for (int i = 0; i < myJsonArrayAsList.size(); i++) {
+				sortedJsonArray.put(myJsonArrayAsList.get(i));
+			}
+		} catch (JSONException e) {
+			logger.error("Error while sorting json array", e);
+			sortedJsonArray = jsonArray;
+		}
+		return sortedJsonArray;
 	}
 	
 	private static boolean checkVaccine(UserNotificationPreferences userPref, String vaccine) {
@@ -316,6 +311,25 @@ public class HelloworldController {
 		return userPrefList;
 	}
 	
+	public static Map<String,String> getDistinctPinDataOfUsers() throws Exception {
+		List<String> pinCodeList = new ArrayList();
+		Map<String,String> pinResponseMap = new HashMap<>();
+		Statement statement = Configuration.getStatementFromDB();
+		String selectQuery = "select distinct(pinCode) from UserNotificationPref where notification_sent is null";
+		try(ResultSet rs = statement.executeQuery(selectQuery);) {
+			while (rs.next()) {
+				pinCodeList.add(rs.getString("pinCode"));
+			}
+		} catch (SQLException e) {
+			logger.error("Error while execution of select query",e);
+		}
+		for(String pincode : pinCodeList) {
+			String responsData = getCentresDetailByPinCode(pincode);
+			pinResponseMap.put(pincode,responsData);
+		}
+		return pinResponseMap;
+	}
+	
 	public static void updateUserPrefNotiSent(UserNotificationPreferences userPref) {
 		String updateQuery = "update UserNotificationPref set notification_sent = 'Y' where id =" + userPref.getId();
 		try (Statement statement = Configuration.getStatementFromDB()) {
@@ -346,6 +360,7 @@ public class HelloworldController {
 			      new InputStreamReader(responseStream, StandardCharsets.UTF_8))
 			        .lines()
 			        .collect(Collectors.joining("\n"));
+		logger.debug("Response recieved for pin " + pincode + " is " +  jsonResponse);
 		return jsonResponse;
 	}
 	
