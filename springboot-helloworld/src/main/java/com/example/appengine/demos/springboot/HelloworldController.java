@@ -44,8 +44,13 @@ public class HelloworldController {
 	public static final String SLOT_TEXT = "<div style='background-color:green;color:yellow'>slot</div>";
 
 	public static void main(String[] args) throws Exception {
-		sendSlotAvailabilityNotification();
-		logger.debug("Main method called successfully");
+		/*
+		 * //sendSlotAvailabilityNotification(); try {
+		 * //sendEmail("jaindpk.1985@gmail.com","Test Schedular",
+		 * "Testing schedular","text"); } catch (MessagingException e) {
+		 * logger.debug("Testing mail sent"); }
+		 * logger.debug("Main method called successfully");
+		 */
 
 	}
 	
@@ -64,7 +69,7 @@ public class HelloworldController {
 			String insertQuery = "insert into UserNotificationPref(number,pinCode,email,reg_date,dose,age,vaccine,notification_sent) values('" + number + "','" + pinCode + "','"
 					+ email + "',CURRENT_TIMESTAMP(),'" + dose + "','" + age + "','" + vaccine + "',null)";
 			stmt.execute(insertQuery);
-			logger.debug("Data Successfully updated in DB");
+			logger.debug("Data Successfully saved in DB");
 			if(email != null && !email.equals("")) {
 				String subject = "Congrats..Registration Successfull";
 				String message = REGISTRATION_MESSAGE_BODY.replace("pincodeVal",pinCode).replace("doseVal",dose).replace("ageVal",age).replace("vaccineVal",vaccine);
@@ -80,23 +85,29 @@ public class HelloworldController {
 		}
 		return "Success";
 	}
-	//on each 3 minutes
-	@Scheduled(fixedRate = 180000)
+	//on each 6 minutes
+	//@Scheduled(fixedRate = 60000)
+	@GetMapping(value = "/scheduleNotification")
 	public void notificationSchedular() {
 		logger.debug("Schedular called successfully");
-		sendSlotAvailabilityNotification();
+		//sendSlotAvailabilityNotification();
+		try {
+			sendEmail("jaindpk.1985@gmail.com","Test Schedular", "Testing schedular","text");
+		} catch (MessagingException e) {
+			logger.debug("Testing mail sent");
+		}
 		logger.debug("Schedular execution complete");
 	}
 	
 	//7:00 am
-	@Scheduled(cron = "0 10 7 * * *")
+	//@Scheduled(cron = "0 10 7 * * *")
 	public void notificationClearSchedularMor() {
 		logger.debug("Clear Schedular called successfully");
 		resetAllUserPref();
 		logger.debug("Clear Schedular executed successfully");
 	}
 	
-	@Scheduled(cron = "0 10 18 * * *")
+	//@Scheduled(cron = "0 10 18 * * *")
 	public void notificationClearSchedularEven() {
 		logger.debug("Clear Schedular called successfully");
 		resetAllUserPref();
