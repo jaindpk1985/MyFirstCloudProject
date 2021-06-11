@@ -1,31 +1,28 @@
 
 package com.example.appengine.demos.springboot;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import javax.mail.MessagingException;
+import org.apache.log4j.Logger;
+import org.json.JSONArray ;
+import org.json.JSONException;
+import org.json.JSONObject ;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.scheduling.annotation.Scheduled;
-import java.sql.*;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.*;
-import java.util.Date;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import javax.mail.*;
-import javax.mail.internet.*;
-import java.nio.charset.StandardCharsets;
-import java.util.stream.Collectors;
-import org.json.JSONObject ;
-import org.json.JSONArray ;
-import org.json.JSONException;
-import org.apache.log4j.Logger;
+import org.springframework.web.bind.annotation.RestController;
 
 
 @RestController
@@ -42,16 +39,12 @@ public class HelloworldController {
 	public static final String SLOT_MESSAGE_SUBJECT = "Slots available for Covid Vaccination as on strDate";
 	public static final String CENTRE_DETAIL_TEXT = "<strong>centreName(<span style='background-color:yellow;'>feeType</span>)</strong><br>centreAddress";
 	public static final String SLOT_TEXT = "<div style='background-color:green;color:yellow'>slot</div>";
-
+	private Dao dao = new Dao();
+	private CowinServices cowinServices = new CowinServices();
+	
 	public static void main(String[] args) throws Exception {
-		/*
-		 * //sendSlotAvailabilityNotification(); try {
-		 * //sendEmail("jaindpk.1985@gmail.com","Test Schedular",
-		 * "Testing schedular","text"); } catch (MessagingException e) {
-		 * logger.debug("Testing mail sent"); }
-		 * logger.debug("Main method called successfully");
-		 */
-
+		HelloworldController helloworldController = new HelloworldController();
+		helloworldController.sendSlotAvailabilityNotification();
 	}
 	
 	@GetMapping("/")
@@ -65,18 +58,17 @@ public class HelloworldController {
 	public String saveNumber(@RequestParam String number, @RequestParam String pinCode, @RequestParam String email,
 			@RequestParam String dose, @RequestParam String age, @RequestParam String vaccine) {
 		
-		try(Statement stmt = Configuration.getStatementFromDB();) {
-			String insertQuery = "insert into UserNotificationPref(number,pinCode,email,reg_date,dose,age,vaccine,notification_sent) values('" + number + "','" + pinCode + "','"
-					+ email + "',CURRENT_TIMESTAMP(),'" + dose + "','" + age + "','" + vaccine + "',null)";
-			stmt.execute(insertQuery);
+		try {
+			dao.saveUserPref(number, pinCode, email, dose, age, vaccine);
 			logger.debug("Data Successfully saved in DB");
+			
 			if(email != null && !email.equals("")) {
 				String subject = "Congrats..Registration Successfull";
 				String message = REGISTRATION_MESSAGE_BODY.replace("pincodeVal",pinCode).replace("doseVal",dose).replace("ageVal",age).replace("vaccineVal",vaccine);
-				sendEmail(email,subject,message,"text/html");
+				cowinServices.sendEmail(email,subject,message,"text/html");
 			}
 		} catch (Exception e) {
-			logger.error("Error while saving number ",e);
+			logger.error("Error while send registration mail",e);
 			if(e.getCause() != null) {
 				return e.getCause().getMessage();
 			}else {
@@ -85,55 +77,51 @@ public class HelloworldController {
 		}
 		return "Success";
 	}
-	//on each 6 minutes
-	//@Scheduled(fixedRate = 60000)
+
+	
+	//on each 5 minutes
 	@GetMapping(value = "/scheduleNotification")
-	public void notificationSchedular() {
+	@ResponseBody
+	public ResponseEntity  notificationSchedular() {
 		logger.debug("Schedular called successfully");
-		//sendSlotAvailabilityNotification();
 		try {
-			sendEmail("jaindpk.1985@gmail.com","Test Schedular", "Testing schedular","text");
-		} catch (MessagingException e) {
-			logger.debug("Testing mail sent");
+			sendSlotAvailabilityNotification();
+		} catch (Exception e1) {
+			logger.error("Error while sending notification",e1);
+			try {
+				cowinServices.sendEmail("jaindpk.1985@gmail.com","Error while executing schedular",e1.getMessage(),"text");
+			} catch (MessagingException e) {
+				//do nothing;
+			}
+			return new ResponseEntity(HttpStatus.METHOD_FAILURE);
 		}
-		logger.debug("Schedular execution complete");
+		return new ResponseEntity(HttpStatus.ACCEPTED);
 	}
-	
-	//7:00 am
-	//@Scheduled(cron = "0 10 7 * * *")
-	public void notificationClearSchedularMor() {
-		logger.debug("Clear Schedular called successfully");
-		resetAllUserPref();
-		logger.debug("Clear Schedular executed successfully");
-	}
-	
-	//@Scheduled(cron = "0 10 18 * * *")
-	public void notificationClearSchedularEven() {
-		logger.debug("Clear Schedular called successfully");
-		resetAllUserPref();
-		logger.debug("Clear Schedular executed successfully");
-	}
-	
+		
 	@GetMapping(value = "/fireService")
 	public String fireService() {
-		resetAllUserPref();
+		dao.resetAllUserPref();
 		logger.debug("Reset Schedular Executed Manually");
 		return "Preferences are Reset successfully";
 	}
 	
-	public static void sendSlotAvailabilityNotification() {
-        try {
-			List<UserNotificationPreferences> userPrefList = getAllUserNotiPref();
-			Map<String,String> pinResponseMap = getDistinctPinDataOfUsers();
-			for(UserNotificationPreferences userPref : userPrefList) {
-				sendNotificationByPref(userPref,pinResponseMap);
-			}
-		} catch (Exception e) {
-			logger.error("Error while sending slot availability notification" ,e );
+	@GetMapping(value = "/resetNotifications")
+	@ResponseBody
+	public ResponseEntity resetNotifications() {
+		dao.resetAllUserPref();
+		logger.debug("Reset Schedular Executed Automatically");
+		return new ResponseEntity(HttpStatus.ACCEPTED);
+	}
+	
+	private void sendSlotAvailabilityNotification() throws Exception {
+		List<UserNotificationPreferences> userPrefList = dao.getAllUserNotiPref();
+		Map<String, String> pinResponseMap = cowinServices.getDistinctPinDataOfUsers();
+		for (UserNotificationPreferences userPref : userPrefList) {
+			sendNotificationByPref(userPref, pinResponseMap);
 		}
 	}
 
-	private static void sendNotificationByPref(UserNotificationPreferences userPref, Map<String,String> pinResponseMap)
+	private void sendNotificationByPref(UserNotificationPreferences userPref, Map<String,String> pinResponseMap)
 			throws Exception, JSONException, MessagingException {
 		String jsonResponse =  pinResponseMap.get(userPref.getPincode());
 		JSONObject resobj = new JSONObject(jsonResponse);
@@ -141,9 +129,9 @@ public class HelloworldController {
 		centers = sortJsonArray(centers);
 		Date date = Calendar.getInstance().getTime();  
 		String strDate1 = dateFormat.format(date);  
-		String strDate2 = getNextDayInString(1);
-		String strDate3 = getNextDayInString(2);
-		String strDate4 = getNextDayInString(3);
+		String strDate2 = CowinServices.getNextDayInString(1);
+		String strDate3 = CowinServices.getNextDayInString(2);
+		String strDate4 = CowinServices.getNextDayInString(3);
 		String rowDetail  = "";
 		for (int i = 0; i < centers.length(); i++) {
 			JSONObject centre = centers.getJSONObject(i);
@@ -160,17 +148,22 @@ public class HelloworldController {
 			String headerString = getHeader(strDate1,strDate2,strDate3,strDate4);
 			String tableBody = headerString + rowDetail;
 			String messageBody = MESSAGE_BODY.replace("searchParams",searchParamTextVal).replace("tableBody",tableBody);
-			sendEmail(userPref.getEmail(),SLOT_MESSAGE_SUBJECT.replace("strDate",strDate1), messageBody,"text/html");
+			cowinServices.sendEmail(userPref.getEmail(),SLOT_MESSAGE_SUBJECT.replace("strDate",strDate1), messageBody,"text/html");
 			logger.debug("Notification mail sent successfully");
 			//update userpref in DB notification_sent = 'Y'
-			updateUserPrefNotiSent(userPref);
+			dao.updateUserPrefNotiSent(userPref);
 		}
 		if(userPref.getNumber() != null) {
 			//sent message to this number
 		}
 	}
 	
-	private static String getRow(UserNotificationPreferences userPref, JSONObject centre,String strDate1,String strDate2,String strDate3,String strDate4) throws JSONException {
+	private String getHeader(String strDate1, String strDate2, String strDate3, String strDate4) {
+		return TABLE_HEADER_TEXT.replace("strDate1", strDate1).replace("strDate2", strDate2)
+				.replace("strDate3", strDate3).replace("strDate4", strDate4);
+	}
+	
+	private String getRow(UserNotificationPreferences userPref, JSONObject centre,String strDate1,String strDate2,String strDate3,String strDate4) throws JSONException {
 		String rowStr = "";
 		String feeType = (String)centre.get("fee_type");
 		String feesText = "";
@@ -209,7 +202,7 @@ public class HelloworldController {
 		return rowStr;
 	}
 	
-	public static String validateAndGetSlot(UserNotificationPreferences userPref, JSONObject dateData) throws JSONException {
+	private String validateAndGetSlot(UserNotificationPreferences userPref, JSONObject dateData) throws JSONException {
 		String slot = "NA";
 		if(checkAgeLimit(userPref,(int)dateData.get("min_age_limit")) && checkVaccine(userPref, (String)dateData.get("vaccine"))){
 			if("Dose2".equals(userPref.getDose()) && (int)dateData.get("available_capacity_dose2") > 0){
@@ -224,7 +217,7 @@ public class HelloworldController {
 		return slot;
 	}
 	
-	public static JSONArray sortJsonArray(JSONArray jsonArray) throws JSONException {
+	private JSONArray sortJsonArray(JSONArray jsonArray) throws JSONException {
 		JSONArray sortedJsonArray = new JSONArray();
 		try {
 			List<JSONObject> myJsonArrayAsList = new ArrayList();
@@ -255,14 +248,14 @@ public class HelloworldController {
 		return sortedJsonArray;
 	}
 	
-	private static boolean checkVaccine(UserNotificationPreferences userPref, String vaccine) {
+	private boolean checkVaccine(UserNotificationPreferences userPref, String vaccine) {
 		if("COVAXIN".equals(userPref.getVaccine()) && "COVAXIN".equals(vaccine) || "COVISHIELD".equals(userPref.getVaccine()) && "COVISHIELD".equals(vaccine)){
 			return true;
 		}
 		return false;
 	}
 	
-	private static JSONArray getApplicableAgeData(UserNotificationPreferences userPref, JSONObject centre) throws JSONException {
+	private JSONArray getApplicableAgeData(UserNotificationPreferences userPref, JSONObject centre) throws JSONException {
 		JSONArray filteredData = new JSONArray();
 		JSONArray sessions = (JSONArray)centre.get("sessions");
 		for (int i = 0; i < sessions.length(); i++) {
@@ -275,14 +268,14 @@ public class HelloworldController {
 		return filteredData;
 	}
 	
-	private static boolean checkAgeLimit(UserNotificationPreferences userPref, int min_age_limit){
+	private boolean checkAgeLimit(UserNotificationPreferences userPref, int min_age_limit){
 		if("Age18".equals(userPref.getAge()) && min_age_limit == 18 || "Age45".equals(userPref.getAge()) && min_age_limit == 45){
 			return true;
 		}
 		return false;
    }
 	
-	private static String getFeesText(UserNotificationPreferences userPref, JSONArray feeDetails) throws JSONException {
+	private String getFeesText(UserNotificationPreferences userPref, JSONArray feeDetails) throws JSONException {
 		String feesStr = "";
 		for (int i = 0; i < feeDetails.length(); i++) {
 			JSONObject fees = feeDetails.getJSONObject(i);
@@ -294,113 +287,5 @@ public class HelloworldController {
 		}
 		return feesStr;
 	}
-	
-	private static String getHeader(String strDate1, String strDate2, String strDate3, String strDate4) {
-		return TABLE_HEADER_TEXT.replace("strDate1", strDate1).replace("strDate2", strDate2)
-				.replace("strDate3", strDate3).replace("strDate4", strDate4);
-	}
-	
-	public static List<UserNotificationPreferences> getAllUserNotiPref() {
-		List<UserNotificationPreferences> userPrefList = new ArrayList<>();
-		Statement statement = Configuration.getStatementFromDB();
-		String selectQuery = "select * from UserNotificationPref where notification_sent is null";
-		try(ResultSet rs = statement.executeQuery(selectQuery);) {
-			while (rs.next()) {
-				UserNotificationPreferences userPref = new UserNotificationPreferences();
-				userPref.setId(rs.getLong("id"));
-				userPref.setEmail(rs.getString("email"));
-				userPref.setPincode(rs.getString("pinCode"));
-				userPref.setDose(rs.getString("dose"));
-				userPref.setAge(rs.getString("age"));
-				userPref.setVaccine(rs.getString("vaccine"));
-				userPref.setNotificationSent(rs.getString("notification_sent"));
-				userPrefList.add(userPref);
-			}
-		} catch (SQLException e) {
-			logger.error("Error while execution of select query",e);
-		}
-		return userPrefList;
-	}
-	
-	public static Map<String,String> getDistinctPinDataOfUsers() throws Exception {
-		List<String> pinCodeList = new ArrayList();
-		Map<String,String> pinResponseMap = new HashMap<>();
-		Statement statement = Configuration.getStatementFromDB();
-		String selectQuery = "select distinct(pinCode) from UserNotificationPref where notification_sent is null";
-		try(ResultSet rs = statement.executeQuery(selectQuery);) {
-			while (rs.next()) {
-				pinCodeList.add(rs.getString("pinCode"));
-			}
-		} catch (SQLException e) {
-			logger.error("Error while execution of select query",e);
-		}
-		for(String pincode : pinCodeList) {
-			String responsData = getCentresDetailByPinCode(pincode);
-			pinResponseMap.put(pincode,responsData);
-		}
-		return pinResponseMap;
-	}
-	
-	public static void updateUserPrefNotiSent(UserNotificationPreferences userPref) {
-		String updateQuery = "update UserNotificationPref set notification_sent = 'Y' where id =" + userPref.getId();
-		try (Statement statement = Configuration.getStatementFromDB()) {
-			statement.executeUpdate(updateQuery);
-		} catch (SQLException e) {
-			logger.error("Error while udpating status in DB", e);
-		}
-	}
-	
-	public static void resetAllUserPref() {
-		String updateQuery = "update UserNotificationPref set notification_sent = null where notification_sent = 'Y'";
-		try (Statement statement = Configuration.getStatementFromDB()) {
-			statement.executeUpdate(updateQuery);
-		} catch (SQLException e) {
-			logger.error("Error while udpating status in DB", e);
-		}
-	}
-	
-	public static String getCentresDetailByPinCode(String pincode)  throws Exception{
-		Date date = Calendar.getInstance().getTime();  
-		String strDate = dateFormat.format(date);  
-		URL url = new URL("https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByPin?pincode=" + pincode + "&date=" + strDate);
-		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-		connection.setRequestProperty("accept", "application/json");
-		// This line makes the request
-		InputStream responseStream = connection.getInputStream();
-		String jsonResponse = new BufferedReader(
-			      new InputStreamReader(responseStream, StandardCharsets.UTF_8))
-			        .lines()
-			        .collect(Collectors.joining("\n"));
-		logger.debug("Response recieved for pin " + pincode + " is " +  jsonResponse);
-		return jsonResponse;
-	}
-	
-	public static String getNextDayInString(int days) {
-		Calendar c = Calendar.getInstance();
-		c.add(Calendar.DAY_OF_MONTH, days);
-		String newDate = dateFormat.format(c.getTime());
-		return newDate;
-	}
-
-	public static void sendEmail(String toEmailId,String subject, String message, String contentType) throws MessagingException{
-		Session session = Configuration.getMailSessionObj();
-		try {
-			MimeMessage msg = new MimeMessage(session);
-			msg.setFrom();
-			msg.setRecipients(javax.mail.Message.RecipientType.TO, toEmailId);
-			msg.setSubject(subject);
-			if("text".equals(contentType)) {
-				msg.setText(message);
-			}
-			else {
-				msg.setContent(message, "text/html");
-			}
-			Transport.send(msg);
-			logger.debug("Mail sent successfully");
-		} catch (MessagingException mex) {
-			logger.error("send failed, exception: " , mex);
-			throw mex;
-		}
-	}
-
+		
 }

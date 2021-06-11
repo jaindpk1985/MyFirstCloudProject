@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<cronentries>
-  <cron>
-    <url>/scheduleNotification</url>
-    <description>daily notification job</description>
-    <schedule>every 3 minutes</schedule>
-  </cron>
-</cronentries>

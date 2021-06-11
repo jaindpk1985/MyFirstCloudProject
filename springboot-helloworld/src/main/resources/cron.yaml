@@ -1,0 +1,8 @@
+cron:
+- description: "run notification"
+  url: /scheduleNotification
+  schedule: every 3 mins
+
+- description: "reset notifications"
+  url: /resetNotifications
+  schedule: every 11 hours from 07:00 to 20:00
