@@ -10,6 +10,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import javax.mail.MessagingException;
 import org.apache.log4j.Logger;
 import org.json.JSONArray ;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.scheduling.annotation.Scheduled;
 
 
 @RestController
@@ -44,8 +46,16 @@ public class HelloworldController {
 	
 	public static void main(String[] args) throws Exception {
 		HelloworldController helloworldController = new HelloworldController();
+		//helloworldController.sendSlotAvailabilityNotification();
+		//CowinServices cowinServices = new CowinServices();
+		//cowinServices.getCentresDetailByPinCode("110092");
+		
 		helloworldController.sendSlotAvailabilityNotification();
+		
 	}
+	
+	
+	
 	
 	@GetMapping("/")
 	public String hello() {
@@ -66,6 +76,8 @@ public class HelloworldController {
 				String subject = "Congrats..Registration Successfull";
 				String message = REGISTRATION_MESSAGE_BODY.replace("pincodeVal",pinCode).replace("doseVal",dose).replace("ageVal",age).replace("vaccineVal",vaccine);
 				cowinServices.sendEmail(email,subject,message,"text/html");
+				
+				checkSlotAndSendNoti(number, pinCode, email, dose, age, vaccine);
 			}
 		} catch (Exception e) {
 			logger.error("Error while send registration mail",e);
@@ -82,6 +94,7 @@ public class HelloworldController {
 	//on each 5 minutes
 	@GetMapping(value = "/scheduleNotification")
 	@ResponseBody
+	//@Scheduled(fixedDelay = 3000)
 	public ResponseEntity  notificationSchedular() {
 		logger.debug("Schedular called successfully");
 		try {
@@ -89,8 +102,8 @@ public class HelloworldController {
 		} catch (Exception e1) {
 			logger.error("Error while sending notification",e1);
 			try {
-				cowinServices.sendEmail("jaindpk.1985@gmail.com","Error while executing schedular",e1.getMessage(),"text");
-			} catch (MessagingException e) {
+				cowinServices.sendEmail(Configuration.TO_EMAIL,"Error while executing schedular",e1.getMessage(),"text");
+			} catch (Exception e) {
 				//do nothing;
 			}
 			return new ResponseEntity(HttpStatus.METHOD_FAILURE);
@@ -124,6 +137,9 @@ public class HelloworldController {
 	private void sendNotificationByPref(UserNotificationPreferences userPref, Map<String,String> pinResponseMap)
 			throws Exception, JSONException, MessagingException {
 		String jsonResponse =  pinResponseMap.get(userPref.getPincode());
+		if(jsonResponse == null) {
+			return;
+		}
 		JSONObject resobj = new JSONObject(jsonResponse);
 		JSONArray centers = (JSONArray)resobj.get("centers");
 		centers = sortJsonArray(centers);
@@ -287,5 +303,22 @@ public class HelloworldController {
 		}
 		return feesStr;
 	}
-		
+	
+	private void checkSlotAndSendNoti(String number, String pinCode, String email, String dose, String age, String vaccine) {
+		UserNotificationPreferences userNotPref = new UserNotificationPreferences();
+		userNotPref.setNumber(number);
+		userNotPref.setPincode(pinCode);
+		userNotPref.setEmail(email);
+		userNotPref.setDose(dose);
+		userNotPref.setAge(age);
+		userNotPref.setVaccine(vaccine);
+		String responseData = cowinServices.getCentresDetailByPinCode(pinCode);
+		Map<String,String> responseMap = new HashMap<>();
+		responseMap.put(pinCode, responseData);
+		try {
+			sendNotificationByPref(userNotPref,responseMap);
+		} catch (Exception e) {
+			logger.error("Error while sending slot mail while registration" , e);
+		}
+	}
 }
