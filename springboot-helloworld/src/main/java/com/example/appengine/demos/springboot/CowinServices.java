@@ -26,6 +26,7 @@ import javax.mail.Transport;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.InternetAddress;
 import java.util.TimeZone;
+import java.util.HashMap;
 
 import org.apache.log4j.Logger;
 
@@ -108,7 +109,7 @@ public class CowinServices {
 				      new InputStreamReader(responseStream, StandardCharsets.UTF_8))
 				        .lines()
 				        .collect(Collectors.joining("\n"));
-			logger.debug("Response recieved for pin " + pincode + " is " +  jsonResponse);
+			logger.debug("Response recieved for pin " + pincode + " is ");
 			return jsonResponse;
 		} catch (Exception e) {
 			logger.error("Error while retrieving data from cowin",e);
@@ -121,19 +122,88 @@ public class CowinServices {
 		return null;
 	}
 	
+	public String getCentresDetailByDistrictId(String districtId){
+		try {
+			Date date = Calendar.getInstance().getTime();  
+			dateFormat.setTimeZone(TimeZone.getTimeZone("Asia/Kolkata"));
+			String strDate = dateFormat.format(date); 
+			URL url = new URL("https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id=" + districtId + "&date=" + strDate);
+			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+			connection.setRequestProperty("accept", "*/*");
+			connection.setRequestProperty("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36");
+			connection.setRequestProperty("http.agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36");
+			connection.setRequestProperty("sec-fetch-site", "cross-site");
+			connection.setRequestProperty("sec-fetch-mode", "cors");
+			connection.setRequestProperty("sec-fetch-dest", "empty");
+			connection.setRequestProperty("access-control-request-method", "GET");
+			connection.setRequestProperty("origin", "https://myfirstcloudproject-316520.appspot.com/");
+			connection.setRequestProperty("referer", "https://myfirstcloudproject-316520.appspot.com/");
+			connection.setRequestProperty("accept-language", "en-US,en;q=0.9");
+			connection.setRequestProperty("accept-encoding", "gzip, deflate, br");
+			connection.setRequestProperty("authority", "cdn-api.co-vin.in");
+			connection.setRequestProperty("scheme", "https");
+			
+			// This line makes the request
+			InputStream responseStream = connection.getInputStream();
+			String jsonResponse = new BufferedReader(
+				      new InputStreamReader(responseStream, StandardCharsets.UTF_8))
+				        .lines()
+				        .collect(Collectors.joining("\n"));
+			logger.debug("Response recieved for districtId " + districtId + " is ");
+			return jsonResponse;
+		} catch (Exception e) {
+			logger.error("Error while retrieving data from cowin",e);
+			try {
+				sendEmail(Configuration.TO_EMAIL,"Error while retrieving data from cowin",e.getMessage(),"text");
+			} catch (Exception em) {
+				//do nothing;
+			}
+		} 
+		return null;
+	}
+	
+	
+	
 	public Map<String,String> getDistinctPinDataOfUsers() throws Exception {
-		List<String> pinCodeList = new ArrayList();
-		Map<String, String> pinResponseMap = dao.getDistinctUsersPin(pinCodeList);
+		Map<String, String> pinResponseMap = new HashMap<>();
+		List<String> pinCodeList = dao.getDistinctUsersPin();
 		int i =1;
 		for(String pincode : pinCodeList) {
-			Thread.sleep(i *1000);
-			String responsData = getCentresDetailByPinCode(pincode);
-			if(responsData != null) {
-				pinResponseMap.put(pincode,responsData);
+			if(pincode != null && pincode.trim().length() > 0) {
+				Thread.sleep(i *1000);
+				String responsData = getCentresDetailByPinCode(pincode);
+				if(responsData != null) {
+					pinResponseMap.put(pincode,responsData);
+				}
+				if (i == 9) {
+					i = 1;
+				} else {
+					i = i + 2;
+				}
 			}
-			i = i+2;
 		}
 		return pinResponseMap;
+	}
+		
+	public Map<String,String> getDistinctDistrictDataOfUsers() throws Exception {
+		Map<String, String> districtResponseMap = new HashMap<>();
+		List<String> districtIdList = dao.getDistinctDistrictId();
+		int i =1;
+		for(String districtId : districtIdList) {
+			if(districtId !=null && districtId.trim().length() > 0) {
+				Thread.sleep(i *1000);
+				String responsData = getCentresDetailByDistrictId(districtId);
+				if(responsData != null) {
+					districtResponseMap.put(districtId,responsData);
+				}
+				if (i == 9) {
+					i = 1;
+				} else {
+					i = i + 2;
+				}
+			}
+		}
+		return districtResponseMap;
 	}
 	
 	public static int getRandomNumber() {

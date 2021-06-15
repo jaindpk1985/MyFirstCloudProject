@@ -28,10 +28,10 @@ public class Dao {
 		return statement;
 	}
 	
-	public void saveUserPref(String number, String pinCode, String email, String dose, String age, String vaccine) {
+	public void saveUserPref(String number, String pinCode, String email, String dose, String age, String vaccine, String districtId, String districtName) {
 		try(Statement statement = getStatementFromDB()) {
-			String insertQuery = "insert into UserNotificationPref(number,pinCode,email,reg_date,dose,age,vaccine,notification_sent) values('" + number + "','" + pinCode + "','"
-					+ email + "',CURRENT_TIMESTAMP(),'" + dose + "','" + age + "','" + vaccine + "',null)";
+			String insertQuery = "insert into UserNotificationPref(number,pinCode,email,reg_date,dose,age,vaccine,district_name,district_id) values('" + number + "','" + pinCode + "','"
+					+ email + "',CURRENT_TIMESTAMP(),'" + dose + "','" + age + "','" + vaccine + "','" + districtName + "','" + districtId + "')";
 			statement.execute(insertQuery);
 		} catch (SQLException e) {
 			logger.error("Exception while saving user preferences", e);
@@ -56,9 +56,9 @@ public class Dao {
 		}
 	}
 	
-	public Map<String, String> getDistinctUsersPin(List<String> pinCodeList) {
-		Map<String,String> pinResponseMap = new HashMap<>();
-		String selectQuery = "select distinct(pinCode) from UserNotificationPref where notification_sent is null";
+	public List<String> getDistinctUsersPin() {
+		List<String> pinCodeList = new ArrayList<>();
+		String selectQuery = "select distinct(pinCode) from UserNotificationPref where notification_sent is null and pinCode is not null";
 		try(Statement statement = getStatementFromDB();
 				ResultSet rs = statement.executeQuery(selectQuery);) {
 			while (rs.next()) {
@@ -67,7 +67,21 @@ public class Dao {
 		} catch (SQLException e) {
 			logger.error("Error while execution of select query",e);
 		}
-		return pinResponseMap;
+		return pinCodeList;
+	}
+	
+	public List<String> getDistinctDistrictId() {
+		List<String> districtIdList = new ArrayList<>();
+		String selectQuery = "select distinct(district_id) from UserNotificationPref where notification_sent is null and district_id is not null";
+		try(Statement statement = getStatementFromDB();
+				ResultSet rs = statement.executeQuery(selectQuery);) {
+			while (rs.next()) {
+				districtIdList.add(rs.getString("district_id"));
+			}
+		} catch (SQLException e) {
+			logger.error("Error while execution of select query",e);
+		}
+		return districtIdList;
 	}
 	
 	public List<UserNotificationPreferences> getAllUserNotiPref() {
@@ -84,6 +98,8 @@ public class Dao {
 				userPref.setAge(rs.getString("age"));
 				userPref.setVaccine(rs.getString("vaccine"));
 				userPref.setNotificationSent(rs.getString("notification_sent"));
+				userPref.setDistrictId(rs.getString("district_id"));
+				userPref.setDistrictName(rs.getString("district_name"));
 				userPrefList.add(userPref);
 			}
 		} catch (SQLException e) {
