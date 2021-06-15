@@ -76,9 +76,9 @@ public class CowinServices {
 	
 	public static String getNextDayInString(int days) {
 		Calendar c = Calendar.getInstance();
+		dateFormat.setTimeZone(TimeZone.getTimeZone("Asia/Kolkata"));
 		c.add(Calendar.DAY_OF_MONTH, days);
-		String newDate = dateFormat.format(c.getTime());
-		return newDate;
+		return dateFormat.format(c.getTime());
 	}
 	
 	public String getCentresDetailByPinCode(String pincode){
@@ -113,7 +113,7 @@ public class CowinServices {
 		} catch (Exception e) {
 			logger.error("Error while retrieving data from cowin",e);
 			try {
-				sendEmail(Configuration.TO_EMAIL,"Error while executing schedular",e.getMessage(),"text");
+				sendEmail(Configuration.TO_EMAIL,"Error while retrieving data from cowin",e.getMessage(),"text");
 			} catch (Exception em) {
 				//do nothing;
 			}
