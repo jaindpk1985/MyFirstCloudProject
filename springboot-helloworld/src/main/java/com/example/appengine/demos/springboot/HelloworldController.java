@@ -52,7 +52,7 @@ public class HelloworldController {
 		//CowinServices cowinServices = new CowinServices();
 		//cowinServices.getCentresDetailByPinCode("110092");
 		
-		//helloworldController.sendSlotAvailabilityNotification();
+		helloworldController.sendSlotAvailabilityNotification();
 		
 	}
 	
@@ -90,7 +90,10 @@ public class HelloworldController {
 		}
 		return "Success";
 	}
-
+	
+	/*
+	 * public void sendRegiAndSlotMail() { ExecutorService }
+	 */
 	
 	//on each 5 minutes
 	@GetMapping(value = "/scheduleNotification")
@@ -139,7 +142,7 @@ public class HelloworldController {
 	private void sendNotificationByPref(UserNotificationPreferences userPref, Map<String,String> pinResponseMap, Map<String,String> districtResponseMap)
 			throws Exception, JSONException, MessagingException {
 		String jsonResponse;
-		if(userPref.getDistrictId() != null) {
+		if(userPref.getDistrictId() != null && userPref.getDistrictId().trim().length() > 0) {
 			jsonResponse = districtResponseMap.get(userPref.getDistrictId());
 		}else {
 			jsonResponse =  pinResponseMap.get(userPref.getPincode());
@@ -165,7 +168,15 @@ public class HelloworldController {
 		}
 		
 		if(userPref.getEmail() != null) {
-			String searchParamTextVal = SEARCH_TEXT.replace("districtVal", userPref.getDistrictName()).replace("pincodeVal", userPref.getPincode())
+			String districtVal = "";
+			String pincode = "";
+			if(userPref.getDistrictId() != null) {
+				districtVal = userPref.getDistrictName();
+			}
+			if(userPref.getPincode() != null) {
+				pincode = userPref.getPincode();
+			}
+			String searchParamTextVal = SEARCH_TEXT.replace("districtVal", districtVal).replace("pincodeVal", pincode)
 					.replace("doseVal",userPref.getDose()).replace("ageVal", userPref.getAge()).replace("vaccineVal",userPref.getVaccine());
 			String headerString = getHeader(strDate1,strDate2,strDate3,strDate4);
 			String tableBody = headerString + rowDetail;
@@ -190,8 +201,12 @@ public class HelloworldController {
 		String feeType = (String)centre.get("fee_type");
 		String feesText = "";
 		if("Paid".equals(feeType)) {
-			JSONArray feeDetails = (JSONArray)centre.get("vaccine_fees");
-			feesText = getFeesText(userPref,feeDetails);
+			try {
+				JSONArray feeDetails = (JSONArray)centre.get("vaccine_fees");
+				feesText = getFeesText(userPref,feeDetails);
+			} catch (Exception e) {
+				//do nothing
+			}
 		}
 		String feeTypeText = feeType + feesText;
 		String centreDetailStr = CENTRE_DETAIL_TEXT.replace("centreName", (String) centre.get("name"))

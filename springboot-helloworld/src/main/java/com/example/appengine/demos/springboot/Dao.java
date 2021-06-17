@@ -58,7 +58,7 @@ public class Dao {
 	
 	public List<String> getDistinctUsersPin() {
 		List<String> pinCodeList = new ArrayList<>();
-		String selectQuery = "select distinct(pinCode) from UserNotificationPref where notification_sent is null and pinCode is not null";
+		String selectQuery = "select distinct(pinCode) from UserNotificationPref where notification_sent is null";
 		try(Statement statement = getStatementFromDB();
 				ResultSet rs = statement.executeQuery(selectQuery);) {
 			while (rs.next()) {
@@ -72,7 +72,7 @@ public class Dao {
 	
 	public List<String> getDistinctDistrictId() {
 		List<String> districtIdList = new ArrayList<>();
-		String selectQuery = "select distinct(district_id) from UserNotificationPref where notification_sent is null and district_id is not null";
+		String selectQuery = "select distinct(district_id) from UserNotificationPref where notification_sent is null";
 		try(Statement statement = getStatementFromDB();
 				ResultSet rs = statement.executeQuery(selectQuery);) {
 			while (rs.next()) {
