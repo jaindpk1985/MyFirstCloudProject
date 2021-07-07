@@ -43,7 +43,7 @@ public class HelloworldController {
 			+ "<tr><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Pincode:</strong> pincodeVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Dose:</strong> doseVal</td></tr><tr><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Vaccine:</strong> vaccineVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Age:</strong> ageVal</td></tr></table><br><a href='http://bestatone.com/covid-vaccination/'>Click to Register for another filter</a><br><br>Thanks<br><a href='http://bestatone.com/'>BestAtOne.com</a>";
 	public static final String MESSAGE_BODY = "Dear User,<br>Slots are available on below Centres.<br><br>searchParams<br><table>tableBody</table><br>"
 			+ "<a href='https://selfregistration.cowin.gov.in/'>Click to Book Slot</a><br><br>"
-			+ "<a href='https://myfirstcloudproject-316520.appspot.com/getCurrentSlotsStatus/?filterStr=filterStrVal'>Click to get current Slots availability for this filter</a><br><br>"
+			+ "<a href='https://myfirstcloudproject-316520.appspot.com/jspController/getCurrentSlotsStatus/?filterStr=filterStrVal'>Click to get current Slots availability for this filter</a><br><br>"
 			+ "<a href='http://bestatone.com/covid-vaccination/'>Click to Register for another filter</a><br><br>"
 			+ "<a href='http://bestatone.com/search-covid-vaccination-centre-and-get-notification-immediately-when-slots-comes/'>Click to give feedback and Suggestions in comment section</a><br><br>"
 			+ "Thanks<br><a href='http://bestatone.com/'>BestAtOne.com</a>";
