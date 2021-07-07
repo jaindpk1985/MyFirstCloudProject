@@ -43,7 +43,7 @@ public class HelloworldController {
 			+ "<tr><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Pincode:</strong> pincodeVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Dose:</strong> doseVal</td></tr><tr><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Vaccine:</strong> vaccineVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Age:</strong> ageVal</td></tr></table><br><a href='http://bestatone.com/covid-vaccination/'>Click to Register for another filter</a><br><br>Thanks<br><a href='http://bestatone.com/'>BestAtOne.com</a>";
 	public static final String MESSAGE_BODY = "Dear User,<br>Slots are available on below Centres.<br><br>searchParams<br><table>tableBody</table><br>"
 			+ "<a href='https://selfregistration.cowin.gov.in/'>Click to Book Slot</a><br><br>"
-			+ "<a href='https://myfirstcloudproject-316520.appspot.com/getCurrentSlotsStatus/?filterStr=132'>Click to get current Slots availability for this filter</a><br><br>"
+			+ "<a href='https://myfirstcloudproject-316520.appspot.com/getCurrentSlotsStatus/?filterStr=filterStrVal'>Click to get current Slots availability for this filter</a><br><br>"
 			+ "<a href='http://bestatone.com/covid-vaccination/'>Click to Register for another filter</a><br><br>"
 			+ "<a href='http://bestatone.com/search-covid-vaccination-centre-and-get-notification-immediately-when-slots-comes/'>Click to give feedback and Suggestions in comment section</a><br><br>"
 			+ "Thanks<br><a href='http://bestatone.com/'>BestAtOne.com</a>";
@@ -197,7 +197,7 @@ public class HelloworldController {
 					.replace("doseVal",userPref.getDose()).replace("ageVal", userPref.getAge()).replace("vaccineVal",userPref.getVaccine());
 			String headerString = getHeader(strDate1,strDate2,strDate3,strDate4);
 			String tableBody = headerString + rowDetail;
-			String messageBody = MESSAGE_BODY.replace("searchParams",searchParamTextVal).replace("tableBody",tableBody);
+			String messageBody = MESSAGE_BODY.replace("filterStrVal",String.valueOf(userPref.getId())).replace("searchParams",searchParamTextVal).replace("tableBody",tableBody);
 			cowinServices.sendEmail(userPref.getEmail(),SLOT_MESSAGE_SUBJECT.replace("strDate",strDate1), messageBody,"text/html");
 			logger.debug("Notification mail sent successfully");
 			//update userpref in DB notification_sent = 'Y'
