@@ -23,6 +23,7 @@ import org.json.JSONObject ;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -42,7 +43,7 @@ public class HelloworldController {
 			+ "<tr><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Pincode:</strong> pincodeVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Dose:</strong> doseVal</td></tr><tr><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Vaccine:</strong> vaccineVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Age:</strong> ageVal</td></tr></table><br><a href='http://bestatone.com/covid-vaccination/'>Click to Register for another filter</a><br><br>Thanks<br><a href='http://bestatone.com/'>BestAtOne.com</a>";
 	public static final String MESSAGE_BODY = "Dear User,<br>Slots are available on below Centres.<br><br>searchParams<br><table>tableBody</table><br>"
 			+ "<a href='https://selfregistration.cowin.gov.in/'>Click to Book Slot</a><br><br>"
-			+ "<a href='https://myfirstcloudproject-316520.appspot.com/getCurrentSlotsStatus/?filterStr=132'>Click to get current Slots availability</a><br><br>"
+			+ "<a href='https://myfirstcloudproject-316520.appspot.com/getCurrentSlotsStatus/?filterStr=132'>Click to get current Slots availability for this filter</a><br><br>"
 			+ "<a href='http://bestatone.com/covid-vaccination/'>Click to Register for another filter</a><br><br>"
 			+ "<a href='http://bestatone.com/search-covid-vaccination-centre-and-get-notification-immediately-when-slots-comes/'>Click to give feedback and Suggestions in comment section</a><br><br>"
 			+ "Thanks<br><a href='http://bestatone.com/'>BestAtOne.com</a>";
@@ -61,7 +62,7 @@ public class HelloworldController {
 		//CowinServices cowinServices = new CowinServices();
 		//cowinServices.getCentresDetailByPinCode("110092");
 		
-		helloworldController.getCurrentSlotsStatus("132");
+		//helloworldController.getCurrentSlotsStatus("132");
 		
 	}
 	
@@ -144,39 +145,7 @@ public class HelloworldController {
 		logger.debug("Reset Schedular Executed Automatically");
 		return new ResponseEntity(HttpStatus.ACCEPTED);
 	}
-	
-	@GetMapping(value = "/getCurrentSlotsStatus")
-	@ResponseBody
-	public String getCurrentSlotsStatus(@RequestParam(value = "filterStr") String idStr) {
-		Map<String, String> pinResponseMap = new HashMap();
-		Map<String, String> districtResponseMap = new HashMap();
-		try {
-			UserNotificationPreferences userPref = dao.getUserPrefById(Long.valueOf(idStr));
-			if(userPref.getPincode() != null) {
-				String responsData = cowinServices.getCentresDetailByPinCode(userPref.getPincode());
-				if(responsData != null) {
-					pinResponseMap.put(userPref.getPincode(),responsData);
-				}
-			}
-			else if(userPref.getDistrictId() != null) {
-				String responsData = cowinServices.getCentresDetailByDistrictId(userPref.getDistrictId());
-				if(responsData != null) {
-					districtResponseMap.put(userPref.getDistrictId(),responsData);
-				}
-			}
-			boolean status = sendNotificationByPref(userPref, pinResponseMap, districtResponseMap);
-			if(!status) {
-				return "No slots available currently. We will notify you once avaiable";
-			}
-			logger.debug("Current status slots mail sent");
-		}
-		catch(Exception e) 
-		{
-			logger.error("Error while getting current status of slots", e);
-			return "Some error occured. Please check after some time";
-		}
-		return "Current Slots status mail Sent Successfully. Please check your mail";
-	}
+
 	
 	private void sendSlotAvailabilityNotification() throws Exception {
 		List<UserNotificationPreferences> userPrefList = dao.getAllUserNotiPref();
@@ -187,7 +156,7 @@ public class HelloworldController {
 		}
 	}
 
-	private boolean sendNotificationByPref(UserNotificationPreferences userPref, Map<String,String> pinResponseMap, Map<String,String> districtResponseMap)
+	public boolean sendNotificationByPref(UserNotificationPreferences userPref, Map<String,String> pinResponseMap, Map<String,String> districtResponseMap)
 			throws Exception, JSONException, MessagingException {
 		String jsonResponse;
 		if(userPref.getDistrictId() != null && userPref.getDistrictId().trim().length() > 0) {
