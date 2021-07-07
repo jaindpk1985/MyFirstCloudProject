@@ -1,6 +1,7 @@
 
 package com.example.appengine.demos.springboot;
 
+import java.io.UnsupportedEncodingException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -11,6 +12,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Callable;
 import javax.mail.MessagingException;
 import org.apache.log4j.Logger;
 import org.json.JSONArray ;
@@ -33,10 +37,15 @@ public class HelloworldController {
 	public static final DateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
 	public static final String BORDER_STYLE = "border: 1px solid black;border-collapse: collapse;text-align: center;";
 	public static final String BORDER_COLOR = "background-color:#ADD8E6;";
-	public static final String REGISTRATION_MESSAGE_BODY = "Hi,<br>You have been registered for Covid Vaccination Slot Information.<br>We will update you once slots are available with below filter.<table style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'>"
+	public static final String REGISTRATION_MESSAGE_BODY = "Dear User,<br><br>You have been registered for Covid Vaccination Slot Information.<br><br>We will update you once slots are available with below filter.<br><table style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'>"
 			+ "<tr><td colspan='2' style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>District:</strong> districtVal</td></tr>"
 			+ "<tr><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Pincode:</strong> pincodeVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Dose:</strong> doseVal</td></tr><tr><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Vaccine:</strong> vaccineVal</td><td style='border: 1px solid black;border-collapse: collapse;background-color:#00ff00;'><strong>Age:</strong> ageVal</td></tr></table><br><a href='http://bestatone.com/covid-vaccination/'>Click to Register for another filter</a><br><br>Thanks<br><a href='http://bestatone.com/'>BestAtOne.com</a>";
-	public static final String MESSAGE_BODY = "Hi,<br>Slots are available on below Centres.<br><br>searchParams<br><table>tableBody</table><br><a href='https://selfregistration.cowin.gov.in/'>Click to Book Slot</a><br><br><a href='http://bestatone.com/covid-vaccination/'>Click to Register for another filter</a><br><br>Thanks<br><a href='http://bestatone.com/'>BestAtOne.com</a>";
+	public static final String MESSAGE_BODY = "Dear User,<br>Slots are available on below Centres.<br><br>searchParams<br><table>tableBody</table><br>"
+			+ "<a href='https://selfregistration.cowin.gov.in/'>Click to Book Slot</a><br><br>"
+			+ "<a href='https://myfirstcloudproject-316520.appspot.com/getCurrentSlotsStatus/?filterStr=132'>Click to get current Slots availability</a><br><br>"
+			+ "<a href='http://bestatone.com/covid-vaccination/'>Click to Register for another filter</a><br><br>"
+			+ "<a href='http://bestatone.com/search-covid-vaccination-centre-and-get-notification-immediately-when-slots-comes/'>Click to give feedback and Suggestions in comment section</a><br><br>"
+			+ "Thanks<br><a href='http://bestatone.com/'>BestAtOne.com</a>";
 	public static final String SEARCH_TEXT = "<strong>District:</strong> districtVal<br><strong>Pincode:</strong> pincodeVal, <strong>Dose:</strong> doseVal <br> <strong>Age:</strong> ageVal, <strong>Vaccine:</strong> vaccineVal";
 	public static final String TABLE_HEADER_TEXT = "<tr><th style ='"+BORDER_STYLE + BORDER_COLOR +"' >Centre</th><th style ='"+BORDER_STYLE + BORDER_COLOR +"' >strDate1</th><th style ='"+BORDER_STYLE+ BORDER_COLOR +"' >strDate2</th><th style ='"+BORDER_STYLE+ BORDER_COLOR +"' >strDate3</th><th style ='"+BORDER_STYLE+ BORDER_COLOR +"' >strDate4</th></tr>";
 	public static final String MESSAGE_ROW_TEXT = "<tr><td style ='"+BORDER_STYLE +"'>centreDetailStr</td><td style ='"+BORDER_STYLE +"'>day1Slot</td><td style ='"+BORDER_STYLE +"'>day2Slot</td><td style ='"+BORDER_STYLE +"'>day3Slot</td><td style ='"+BORDER_STYLE +"'>day4Slot</td></tr>";
@@ -52,7 +61,7 @@ public class HelloworldController {
 		//CowinServices cowinServices = new CowinServices();
 		//cowinServices.getCentresDetailByPinCode("110092");
 		
-		helloworldController.sendSlotAvailabilityNotification();
+		helloworldController.getCurrentSlotsStatus("132");
 		
 	}
 	
@@ -76,9 +85,18 @@ public class HelloworldController {
 			if(email != null && !email.equals("")) {
 				String subject = "Congrats..Registration Successfull";
 				String message = REGISTRATION_MESSAGE_BODY.replace("districtVal",districtName).replace("pincodeVal",pinCode).replace("doseVal",dose).replace("ageVal",age).replace("vaccineVal",vaccine);
-				cowinServices.sendEmail(email,subject,message,"text/html");
 				
-				checkSlotAndSendNoti(number, pinCode, email, dose, age, vaccine, districtId, districtName);
+				ExecutorService executorService = Executors.newFixedThreadPool(10);
+				Runnable runTask  = () -> {
+					try {
+						cowinServices.sendEmail(email,subject,message,"text/html");
+						checkSlotAndSendNoti(number, pinCode, email, dose, age, vaccine, districtId, districtName);
+					} catch (Exception e) {
+						logger.error("Error while send registration and slot mail",e);
+					}
+				};
+				executorService.execute(runTask);
+				executorService.shutdown();
 			}
 		} catch (Exception e) {
 			logger.error("Error while send registration mail",e);
@@ -90,11 +108,8 @@ public class HelloworldController {
 		}
 		return "Success";
 	}
-	
-	/*
-	 * public void sendRegiAndSlotMail() { ExecutorService }
-	 */
-	
+
+
 	//on each 5 minutes
 	@GetMapping(value = "/scheduleNotification")
 	@ResponseBody
@@ -130,6 +145,39 @@ public class HelloworldController {
 		return new ResponseEntity(HttpStatus.ACCEPTED);
 	}
 	
+	@GetMapping(value = "/getCurrentSlotsStatus")
+	@ResponseBody
+	public String getCurrentSlotsStatus(@RequestParam(value = "filterStr") String idStr) {
+		Map<String, String> pinResponseMap = new HashMap();
+		Map<String, String> districtResponseMap = new HashMap();
+		try {
+			UserNotificationPreferences userPref = dao.getUserPrefById(Long.valueOf(idStr));
+			if(userPref.getPincode() != null) {
+				String responsData = cowinServices.getCentresDetailByPinCode(userPref.getPincode());
+				if(responsData != null) {
+					pinResponseMap.put(userPref.getPincode(),responsData);
+				}
+			}
+			else if(userPref.getDistrictId() != null) {
+				String responsData = cowinServices.getCentresDetailByDistrictId(userPref.getDistrictId());
+				if(responsData != null) {
+					districtResponseMap.put(userPref.getDistrictId(),responsData);
+				}
+			}
+			boolean status = sendNotificationByPref(userPref, pinResponseMap, districtResponseMap);
+			if(!status) {
+				return "No slots available currently. We will notify you once avaiable";
+			}
+			logger.debug("Current status slots mail sent");
+		}
+		catch(Exception e) 
+		{
+			logger.error("Error while getting current status of slots", e);
+			return "Some error occured. Please check after some time";
+		}
+		return "Current Slots status mail Sent Successfully. Please check your mail";
+	}
+	
 	private void sendSlotAvailabilityNotification() throws Exception {
 		List<UserNotificationPreferences> userPrefList = dao.getAllUserNotiPref();
 		Map<String, String> pinResponseMap = cowinServices.getDistinctPinDataOfUsers();
@@ -139,7 +187,7 @@ public class HelloworldController {
 		}
 	}
 
-	private void sendNotificationByPref(UserNotificationPreferences userPref, Map<String,String> pinResponseMap, Map<String,String> districtResponseMap)
+	private boolean sendNotificationByPref(UserNotificationPreferences userPref, Map<String,String> pinResponseMap, Map<String,String> districtResponseMap)
 			throws Exception, JSONException, MessagingException {
 		String jsonResponse;
 		if(userPref.getDistrictId() != null && userPref.getDistrictId().trim().length() > 0) {
@@ -148,7 +196,7 @@ public class HelloworldController {
 			jsonResponse =  pinResponseMap.get(userPref.getPincode());
 		}
 		if(jsonResponse == null) {
-			return;
+			return false;
 		}
 		JSONObject resobj = new JSONObject(jsonResponse);
 		JSONArray centers = (JSONArray)resobj.get("centers");
@@ -164,7 +212,7 @@ public class HelloworldController {
 		}
 		if(rowDetail.trim().length() == 0) {
 			//no need to send notification for this case.
-			return;
+			return false;
 		}
 		
 		if(userPref.getEmail() != null) {
@@ -189,6 +237,7 @@ public class HelloworldController {
 		if(userPref.getNumber() != null) {
 			//sent message to this number
 		}
+		return true;
 	}
 	
 	private String getHeader(String strDate1, String strDate2, String strDate3, String strDate4) {

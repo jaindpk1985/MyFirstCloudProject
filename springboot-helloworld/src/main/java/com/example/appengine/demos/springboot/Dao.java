@@ -84,6 +84,27 @@ public class Dao {
 		return districtIdList;
 	}
 	
+	public UserNotificationPreferences getUserPrefById(Long id) {
+		UserNotificationPreferences userPref = new UserNotificationPreferences();
+		String selectQuery = "select * from UserNotificationPref where id = " + id;
+		try (Statement statement = getStatementFromDB(); ResultSet rs = statement.executeQuery(selectQuery);) {
+			if (rs != null && rs.next()) {
+				userPref.setId(rs.getLong("id"));
+				userPref.setEmail(rs.getString("email"));
+				userPref.setPincode(rs.getString("pinCode"));
+				userPref.setDose(rs.getString("dose"));
+				userPref.setAge(rs.getString("age"));
+				userPref.setVaccine(rs.getString("vaccine"));
+				userPref.setNotificationSent(rs.getString("notification_sent"));
+				userPref.setDistrictId(rs.getString("district_id"));
+				userPref.setDistrictName(rs.getString("district_name"));
+			}
+		} catch (SQLException e) {
+			logger.error("Error while execution of select query", e);
+		}
+		return userPref;
+	}
+	
 	public List<UserNotificationPreferences> getAllUserNotiPref() {
 		List<UserNotificationPreferences> userPrefList = new ArrayList<>();
 		String selectQuery = "select * from UserNotificationPref where notification_sent is null";

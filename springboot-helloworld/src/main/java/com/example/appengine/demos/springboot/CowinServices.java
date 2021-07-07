@@ -112,9 +112,9 @@ public class CowinServices {
 			logger.debug("Response recieved for pin " + pincode + " is ");
 			return jsonResponse;
 		} catch (Exception e) {
-			logger.error("Error while retrieving data from cowin",e);
+			logger.error("Error while retrieving pincode data from cowin",e);
 			try {
-				sendEmail(Configuration.TO_EMAIL,"Error while retrieving data from cowin",e.getMessage(),"text");
+				//sendEmail(Configuration.TO_EMAIL,"Error while retrieving data from cowin",e.getMessage(),"text");
 			} catch (Exception em) {
 				//do nothing;
 			}
@@ -152,9 +152,9 @@ public class CowinServices {
 			logger.debug("Response recieved for districtId " + districtId + " is ");
 			return jsonResponse;
 		} catch (Exception e) {
-			logger.error("Error while retrieving data from cowin",e);
+			logger.error("Error while retrieving district data from cowin",e);
 			try {
-				sendEmail(Configuration.TO_EMAIL,"Error while retrieving data from cowin",e.getMessage(),"text");
+				//sendEmail(Configuration.TO_EMAIL,"Error while retrieving data from cowin",e.getMessage(),"text");
 			} catch (Exception em) {
 				//do nothing;
 			}
